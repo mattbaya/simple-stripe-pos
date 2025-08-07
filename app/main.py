@@ -25,8 +25,10 @@ MEMBERSHIP_AMOUNT = int(os.getenv('MEMBERSHIP_AMOUNT', '2000'))  # $20 in cents
 SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
 SMTP_PORT = int(os.getenv('SMTP_PORT', '587'))
 FROM_EMAIL = os.getenv('FROM_EMAIL')
-NOTIFICATION_EMAIL = os.getenv('NOTIFICATION_EMAIL', 'info@southwilliamstown.org')
-ORGANIZATION_NAME = os.getenv('ORGANIZATION_NAME', 'South Williamstown Community Association')
+NOTIFICATION_EMAIL = os.getenv('NOTIFICATION_EMAIL')
+ORGANIZATION_NAME = os.getenv('ORGANIZATION_NAME', 'Community Organization')
+ORGANIZATION_LOGO = os.getenv('ORGANIZATION_LOGO', '/static/logo.png')
+ORGANIZATION_WEBSITE = os.getenv('ORGANIZATION_WEBSITE', '')
 
 # OAuth2 configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -174,7 +176,10 @@ This payment was processed through Stripe Terminal at your community event.
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', 
+                         organization_name=ORGANIZATION_NAME,
+                         organization_logo=ORGANIZATION_LOGO,
+                         organization_website=ORGANIZATION_WEBSITE)
 
 @app.route('/health')
 def health():
