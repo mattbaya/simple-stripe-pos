@@ -1,0 +1,34 @@
+services:
+  pos-app:
+    build: .
+    container_name: community-pos
+    ports:
+      - "8080:5000"
+    environment:
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_LOCATION_ID=${STRIPE_LOCATION_ID}
+      - MEMBERSHIP_AMOUNT=${MEMBERSHIP_AMOUNT:-2000}
+      - FLASK_ENV=production
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL:-info@southwilliamstown.org}
+      - ORGANIZATION_NAME=${ORGANIZATION_NAME:-South Williamstown Community Association}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - pos-network
+
+networks:
+  pos-network:
+    driver: bridge
