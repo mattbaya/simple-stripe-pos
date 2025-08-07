@@ -43,27 +43,53 @@ def generate_refresh_token():
         }
     }
     
-    try:
-        # Run OAuth2 flow
-        flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-        
-        print("\n🔐 Starting OAuth2 flow for headless servers...")
-        print("Please follow these instructions:")
-        print("1. The script will now print a URL.")
-        print("2. Open that URL in a web browser on any machine (e.g., your laptop).")
-        print("3. Log in to your Google account and grant the requested permissions.")
-        print("4. After authorization, Google will provide you with a code.")
-        print("5. Copy that code and paste it back here when prompted.\n")
+    import urllib.parse
 
-        credentials = flow.run_console()
+# ... (rest of the imports)
+
+# ... (rest of the file until the try block)
+
+    try:
+        # Manually construct the authorization URL to ensure correctness
+        base_auth_url = "https://accounts.google.com/o/oauth2/auth"
+        params = {
+            'client_id': client_id,
+            'redirect_uri': 'http://localhost',
+            'response_type': 'code',
+            'scope': ' '.join(SCOPES),
+            'access_type': 'offline',
+            'prompt': 'consent'
+        }
+        auth_url = f"{base_auth_url}?{urllib.parse.urlencode(params)}"
+
+        print("\n🔐 Starting OAuth2 flow for headless servers...")
+        print("\n1. Open this URL in your browser on any machine:")
+        print(f"\n{auth_url}\n")
+        print("2. After you grant permissions, your browser will show a 'This site can’t be reached' error. This is expected.")
+        print("3. Copy the ENTIRE URL from your browser's address bar (it will start with 'http://localhost').")
         
+        # Get the full redirect URL from the user
+        redirect_url = input("\n4. Paste the full URL from your browser here: ").strip()
+        
+        # Extract the authorization code from the redirect URL
+        code = urllib.parse.parse_qs(urllib.parse.urlparse(redirect_url).query)['code'][0]
+
+        # Manually exchange the code for a token
+        flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+        flow.redirect_uri = 'http://localhost'  # Explicitly set the redirect_uri for the token exchange
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+
         print("\n✅ Authorization successful!")
         print("\n📋 Add these values to your .env file:")
         print("=" * 50)
         print(f"GOOGLE_CLIENT_ID={client_id}")
         print(f"GOOGLE_CLIENT_SECRET={client_secret}")
         print(f"GOOGLE_REFRESH_TOKEN={credentials.refresh_token}")
-        print(f"FROM_EMAIL={credentials.token.get('email', 'your_email@domain.com')}")
+        
+        # Prompt for the email since it's not always in the response
+        from_email = input("Enter the Google email address you just authorized: ").strip()
+        print(f"FROM_EMAIL={from_email}")
         print("=" * 50)
         
         # Save to file as well
@@ -72,7 +98,7 @@ def generate_refresh_token():
             f.write(f"GOOGLE_CLIENT_ID={client_id}\n")
             f.write(f"GOOGLE_CLIENT_SECRET={client_secret}\n")
             f.write(f"GOOGLE_REFRESH_TOKEN={credentials.refresh_token}\n")
-            f.write(f"# FROM_EMAIL=your_email@domain.com\n")
+            f.write(f"FROM_EMAIL={from_email}\n")
         
         print(f"\n💾 Configuration also saved to .env.oauth")
         print("⚠️  Keep these credentials secure and never commit them to version control!")
@@ -81,6 +107,7 @@ def generate_refresh_token():
         print(f"\n❌ Error during OAuth2 flow: {str(e)}")
         print("🔧 Make sure you have:")
         print("   - Enabled Gmail API in Google Cloud Console")
+        print("   - Correctly copied the full authorization code")
         print("   - Added http://localhost to authorized redirect URIs")
         print("   - Installed required dependencies: pip install google-auth-oauthlib")
 
