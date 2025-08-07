@@ -1,6 +1,6 @@
 # Community POS System
 
-A lightweight, containerized point-of-sale application for in-person donation and membership payments using Stripe Terminal.
+A lightweight, containerized point-of-sale application for community organizations to process in-person donations and membership payments using Stripe Terminal hardware.
 
 ## Features
 
@@ -8,9 +8,9 @@ A lightweight, containerized point-of-sale application for in-person donation an
 - Integration with Stripe S700 terminal for card-present transactions
 - Collects payer name and optional email
 - Preset membership amount ($20 default) or custom donation amounts
-- **Automatic email receipts** sent to donors
-- **Email notifications** sent to organization (info@southwilliamstown.org)
-- SWCA logo and branding
+- **Automatic email receipts** sent to donors using OAuth2-authenticated Gmail
+- **Email notifications** sent to configurable organization email
+- Customizable organization branding and logo
 - No local database required - all data handled by Stripe
 - Containerized with Docker for easy deployment
 
@@ -120,10 +120,12 @@ pos-docker/
 ├── templates/
 │   └── index.html
 ├── static/
+│   └── logo.png          # Your organization logo
 ├── docker-compose.yml
 ├── Dockerfile
 ├── requirements.txt
-├── .env
+├── env-template           # Template for .env file
+├── .env                  # Your configuration (create from template)
 └── README.md
 ```
 
@@ -132,7 +134,7 @@ pos-docker/
 Create a `.env` file in the project root:
 
 ```bash
-cp .env.example .env
+cp env-template .env
 ```
 
 Edit `.env` with your Stripe credentials:
@@ -153,9 +155,11 @@ SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
-FROM_EMAIL=your_email@gmail.com
-NOTIFICATION_EMAIL=info@southwilliamstown.org
-ORGANIZATION_NAME=South Williamstown Community Association
+FROM_EMAIL=payments@yourcommunity.org
+NOTIFICATION_EMAIL=treasurer@yourcommunity.org
+ORGANIZATION_NAME=Your Community Organization
+ORGANIZATION_LOGO=/static/logo.png
+ORGANIZATION_WEBSITE=https://yourcommunity.org
 ```
 
 ⚠️ **Security**: Never commit the `.env` file to version control. Keep your API keys secure.
@@ -175,7 +179,7 @@ docker compose ps
 docker compose logs -f
 ```
 
-The application will be available at: `http://bolt.svaha.com:8080`
+The application will be available at: `http://localhost:8080`
 
 ## Usage
 
@@ -202,7 +206,7 @@ The application will be available at: `http://bolt.svaha.com:8080`
 2. Terminal processes payment through Stripe
 3. Success/failure message appears in web interface
 4. Receipt email sent to donor (if email provided and configured)
-5. Notification email sent to info@southwilliamstown.org (if configured)
+5. Notification email sent to organization (if configured)
 
 ## Management Commands
 
@@ -276,8 +280,8 @@ curl http://localhost:8080/health
 - Review logs for specific SMTP error messages
 
 **Notification Email Issues:**
-- Notifications are sent to `info@southwilliamstown.org` by default
-- Change `NOTIFICATION_EMAIL` in `.env` to use a different address
+- Configure `NOTIFICATION_EMAIL` in `.env` for your organization
+- Ensure the SMTP account has permission to send to this address
 - Ensure the SMTP account has permission to send to external addresses
 
 ## Security Considerations
