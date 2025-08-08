@@ -57,14 +57,19 @@
                 <h1 class="text-center mb-5">{{ organization_name }} Payment System</h1>
                 
                 <div class="row mb-4">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <button class="btn btn-primary w-100 payment-button" onclick="selectPaymentType('donation')">
                             Make a Donation
                         </button>
                     </div>
-                    <div class="col-md-6">
-                        <button class="btn btn-success w-100 payment-button" onclick="selectPaymentType('membership')">
-                            Pay for Membership
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100 payment-button" onclick="selectPaymentType('membership', 'individual')">
+                            Individual Membership<br><small>$35</small>
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-success w-100 payment-button" onclick="selectPaymentType('membership', 'household')">
+                            Household Membership<br><small>$50</small>
                         </button>
                     </div>
                 </div>
@@ -87,7 +92,25 @@
                             
                             <div id="donation-amount" class="mb-3" style="display: none;">
                                 <label for="amount" class="form-label">Donation Amount ($)</label>
-                                <input type="number" class="form-control" id="amount" min="1" step="0.01" placeholder="20.00">
+                                <input type="number" class="form-control" id="amount" min="1" step="0.01" placeholder="20.00" onchange="updateFeeCalculation()">
+                            </div>
+                            
+                            <!-- Fee Coverage Option -->
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="cover-fees" onchange="updateFeeCalculation()">
+                                    <label class="form-check-label" for="cover-fees">
+                                        <strong>Help us cover processing fees</strong>
+                                        <small class="text-muted d-block">Cover the 2.9% + $0.30 Stripe processing fee</small>
+                                    </label>
+                                </div>
+                                <div id="fee-breakdown" class="mt-2 p-2 bg-light rounded" style="display: none;">
+                                    <small class="text-muted">
+                                        <div>Base amount: $<span id="base-amount">0.00</span></div>
+                                        <div>Processing fee: $<span id="fee-amount">0.00</span></div>
+                                        <div><strong>Total: $<span id="total-amount">0.00</span></strong></div>
+                                    </small>
+                                </div>
                             </div>
                             
                             <div class="reader-selection">
@@ -127,22 +150,91 @@
 
     <script>
         let selectedPaymentType = null;
+        let selectedMembershipType = null;
         let selectedReader = null;
         let currentPaymentIntent = null;
+        let currentFeeData = null;
 
-        function selectPaymentType(type) {
+        function selectPaymentType(type, membershipType = null) {
             selectedPaymentType = type;
+            selectedMembershipType = membershipType;
             document.getElementById('payment-form').style.display = 'block';
             
             if (type === 'donation') {
                 document.getElementById('payment-title').textContent = 'Make a Donation';
                 document.getElementById('donation-amount').style.display = 'block';
-            } else {
-                document.getElementById('payment-title').textContent = 'Membership Payment ($20)';
+            } else if (type === 'membership') {
+                if (membershipType === 'individual') {
+                    document.getElementById('payment-title').textContent = 'Individual Membership Payment ($35)';
+                } else if (membershipType === 'household') {
+                    document.getElementById('payment-title').textContent = 'Household Membership Payment ($50)';
+                }
                 document.getElementById('donation-amount').style.display = 'none';
+                // Calculate fees for membership immediately
+                updateFeeCalculation();
             }
             
             hideStatus();
+        }
+
+        async function updateFeeCalculation() {
+            const coverFees = document.getElementById('cover-fees').checked;
+            const feeBreakdown = document.getElementById('fee-breakdown');
+            
+            if (!selectedPaymentType) {
+                feeBreakdown.style.display = 'none';
+                return;
+            }
+            
+            let amount = null;
+            if (selectedPaymentType === 'donation') {
+                const amountInput = document.getElementById('amount').value;
+                if (!amountInput || parseFloat(amountInput) <= 0) {
+                    feeBreakdown.style.display = 'none';
+                    return;
+                }
+                amount = parseFloat(amountInput);
+            }
+            
+            try {
+                const response = await fetch('/calculate-fees', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        payment_type: selectedPaymentType,
+                        membership_type: selectedMembershipType,
+                        amount: amount
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.error('Fee calculation error:', data.error);
+                    feeBreakdown.style.display = 'none';
+                    return;
+                }
+                
+                currentFeeData = data;
+                
+                // Update fee display
+                document.getElementById('base-amount').textContent = data.base_amount_dollars.toFixed(2);
+                document.getElementById('fee-amount').textContent = data.fee_amount_dollars.toFixed(2);
+                document.getElementById('total-amount').textContent = data.total_with_fees_dollars.toFixed(2);
+                
+                // Show/hide breakdown based on checkbox
+                if (coverFees) {
+                    feeBreakdown.style.display = 'block';
+                } else {
+                    feeBreakdown.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error calculating fees:', error);
+                feeBreakdown.style.display = 'none';
+            }
         }
 
         async function discoverReaders() {
@@ -219,6 +311,7 @@
             }
 
             const payerEmail = document.getElementById('payer-email').value.trim();
+            const coverFees = document.getElementById('cover-fees').checked;
 
             showLoading(true);
 
@@ -231,9 +324,11 @@
                     },
                     body: JSON.stringify({
                         payment_type: selectedPaymentType,
+                        membership_type: selectedMembershipType,
                         amount: amount,
                         payer_name: payerName,
-                        payer_email: payerEmail
+                        payer_email: payerEmail,
+                        cover_fees: coverFees
                     })
                 });
 
@@ -325,13 +420,17 @@
 
         function resetForm() {
             selectedPaymentType = null;
+            selectedMembershipType = null;
             selectedReader = null;
             currentPaymentIntent = null;
+            currentFeeData = null;
             
             document.getElementById('payment-form').style.display = 'none';
             document.getElementById('payer-name').value = '';
             document.getElementById('payer-email').value = '';
             document.getElementById('amount').value = '';
+            document.getElementById('cover-fees').checked = false;
+            document.getElementById('fee-breakdown').style.display = 'none';
             document.getElementById('process-payment-btn').disabled = true;
             document.getElementById('reader-list').innerHTML = '<button class="btn btn-outline-secondary" onclick="discoverReaders()">Find Readers</button>';
             

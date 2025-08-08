@@ -4,10 +4,13 @@ A lightweight, containerized point-of-sale application for community organizatio
 
 ## Features
 
-- Simple web interface with "Donate" and "Membership" buttons
+- Simple web interface with donation and membership buttons
+- **Two membership tiers**: Individual ($35) and Household ($50)
 - Integration with Stripe S700 terminal for card-present transactions
+- **Optional fee coverage**: Users can choose to cover 2.9% + $0.30 Stripe processing fees
+- Real-time fee calculation with transparent breakdown display
 - Collects payer name and optional email
-- Preset membership amount ($20 default) or custom donation amounts
+- Custom donation amounts with dynamic fee calculations
 - **Automatic email receipts** sent to donors using OAuth2-authenticated Gmail
 - **Email notifications** sent to configurable organization email
 - Customizable organization branding and logo
@@ -147,8 +150,9 @@ STRIPE_PUBLISHABLE_KEY=pk_test_...  # Use pk_live_... for production
 # Location ID (get from Stripe Dashboard → Terminal → Locations)
 STRIPE_LOCATION_ID=tml_...
 
-# Membership amount in cents (2000 = $20.00)
-MEMBERSHIP_AMOUNT=2000
+# Membership amounts in cents
+INDIVIDUAL_MEMBERSHIP_AMOUNT=3500  # $35.00
+HOUSEHOLD_MEMBERSHIP_AMOUNT=5000   # $50.00
 
 # Email Configuration (for receipts and notifications)
 SMTP_SERVER=smtp.gmail.com
@@ -194,9 +198,10 @@ The application will be available at: `http://localhost:8080`
    - Enter donation amount
    - Click "Process Payment"
 5. For memberships:
-   - Click "Pay for Membership" 
+   - Click "Individual Membership ($35)" or "Household Membership ($50)"
    - Enter payer's name and optional email
-   - Click "Process Payment" (amount is preset at $20)
+   - Optionally check "Help us cover processing fees" to add Stripe fees
+   - Click "Process Payment"
 6. Follow prompts on the Stripe terminal to complete payment
 7. Wait for confirmation message
 
@@ -296,10 +301,25 @@ curl http://localhost:8080/health
 
 ### Changing Default Amounts
 
-Edit `MEMBERSHIP_AMOUNT` in `.env` file (amount in cents):
+Edit membership amounts in `.env` file (amounts in cents):
 ```env
-MEMBERSHIP_AMOUNT=2500  # $25.00
+INDIVIDUAL_MEMBERSHIP_AMOUNT=4000  # $40.00
+HOUSEHOLD_MEMBERSHIP_AMOUNT=6000   # $60.00
 ```
+
+### Fee Coverage Feature
+
+The application automatically calculates Stripe processing fees (2.9% + $0.30 per transaction) and allows users to optionally cover these fees. When enabled:
+
+- Users see a transparent breakdown: base amount, fee amount, and total
+- Fee calculation updates dynamically as donation amounts change
+- All payment metadata includes fee information for reporting
+- Receipts clearly indicate when fees were covered
+
+Examples:
+- $20 donation + fees = $20.88 total (covers $0.88 in processing fees)
+- $35 individual membership + fees = $36.32 total (covers $1.32 in processing fees)
+- $50 household membership + fees = $51.75 total (covers $1.75 in processing fees)
 
 ### Modifying the Interface
 

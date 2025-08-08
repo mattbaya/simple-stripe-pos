@@ -19,7 +19,9 @@ app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 STRIPE_LOCATION_ID = os.getenv('STRIPE_LOCATION_ID')
-MEMBERSHIP_AMOUNT = int(os.getenv('MEMBERSHIP_AMOUNT', '2000'))  # $20 in cents
+# Membership amounts in cents
+INDIVIDUAL_MEMBERSHIP_AMOUNT = int(os.getenv('INDIVIDUAL_MEMBERSHIP_AMOUNT', '3500'))  # $35 in cents
+HOUSEHOLD_MEMBERSHIP_AMOUNT = int(os.getenv('HOUSEHOLD_MEMBERSHIP_AMOUNT', '5000'))  # $50 in cents
 
 # Email configuration
 SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -148,6 +150,20 @@ def send_receipt_email(payer_email, payer_name, amount, payment_type, transactio
     
     return send_email(payer_email, subject, body, is_html=True)
 
+def calculate_fee_amount(base_amount_cents):
+    """Calculate Stripe processing fee (2.9% + $0.30)"""
+    fee_percentage = 0.029
+    fee_fixed = 30  # 30 cents in cents
+    
+    # Calculate total fee
+    fee = round(base_amount_cents * fee_percentage) + fee_fixed
+    return fee
+
+def calculate_total_with_fees(base_amount_cents):
+    """Calculate total amount when user opts to cover processing fees"""
+    fee = calculate_fee_amount(base_amount_cents)
+    return base_amount_cents + fee
+
 def send_notification_email(payer_name, payer_email, amount, payment_type, transaction_id):
     """Send notification email to the organization"""
     amount_dollars = amount / 100
@@ -185,31 +201,93 @@ def index():
 def health():
     return jsonify({'status': 'healthy'})
 
+@app.route('/calculate-fees', methods=['POST'])
+def calculate_fees():
+    try:
+        data = request.json
+        amount = data.get('amount')
+        payment_type = data.get('payment_type')
+        membership_type = data.get('membership_type')
+        
+        # Determine base amount
+        if payment_type == 'membership':
+            if membership_type == 'individual':
+                base_amount = INDIVIDUAL_MEMBERSHIP_AMOUNT
+            elif membership_type == 'household':
+                base_amount = HOUSEHOLD_MEMBERSHIP_AMOUNT
+            else:
+                return jsonify({'error': 'Invalid membership type'}), 400
+        elif payment_type == 'donation':
+            if not amount or amount <= 0:
+                return jsonify({'error': 'Invalid donation amount'}), 400
+            base_amount = int(amount * 100)  # Convert to cents
+        else:
+            return jsonify({'error': 'Invalid payment type'}), 400
+        
+        fee_amount = calculate_fee_amount(base_amount)
+        total_with_fees = calculate_total_with_fees(base_amount)
+        
+        return jsonify({
+            'base_amount_cents': base_amount,
+            'base_amount_dollars': base_amount / 100,
+            'fee_amount_cents': fee_amount,
+            'fee_amount_dollars': fee_amount / 100,
+            'total_with_fees_cents': total_with_fees,
+            'total_with_fees_dollars': total_with_fees / 100
+        })
+        
+    except Exception as e:
+        logger.error(f"Error calculating fees: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/create-payment-intent', methods=['POST'])
 def create_payment_intent():
     try:
         data = request.json
         payment_type = data.get('payment_type')
+        membership_type = data.get('membership_type')
         amount = data.get('amount')
         payer_name = data.get('payer_name', '')
         payer_email = data.get('payer_email', '')
+        cover_fees = data.get('cover_fees', False)
         
+        # Determine base amount
         if payment_type == 'membership':
-            amount = MEMBERSHIP_AMOUNT
-            description = f"Membership payment from {payer_name}"
+            if membership_type == 'individual':
+                base_amount = INDIVIDUAL_MEMBERSHIP_AMOUNT
+                description = f"Individual membership payment from {payer_name}"
+            elif membership_type == 'household':
+                base_amount = HOUSEHOLD_MEMBERSHIP_AMOUNT
+                description = f"Household membership payment from {payer_name}"
+            else:
+                return jsonify({'error': 'Invalid membership type'}), 400
         else:
+            base_amount = amount
             description = f"Donation from {payer_name}"
+        
+        # Calculate final amount with fees if requested
+        if cover_fees:
+            final_amount = calculate_total_with_fees(base_amount)
+            fee_amount = calculate_fee_amount(base_amount)
+            description += f" (includes ${fee_amount/100:.2f} processing fee)"
+        else:
+            final_amount = base_amount
         
         metadata = {
             'payment_type': payment_type,
             'payer_name': payer_name,
+            'base_amount': str(base_amount),
+            'cover_fees': str(cover_fees)
         }
+        
+        if cover_fees:
+            metadata['fee_amount'] = str(calculate_fee_amount(base_amount))
         
         if payer_email:
             metadata['payer_email'] = payer_email
         
         payment_intent = stripe.PaymentIntent.create(
-            amount=amount,
+            amount=final_amount,
             currency='usd',
             payment_method_types=['card_present'],
             capture_method='automatic',
@@ -217,7 +295,7 @@ def create_payment_intent():
             metadata=metadata
         )
         
-        logger.info(f"Created PaymentIntent {payment_intent.id} for {payment_type} amount {amount}")
+        logger.info(f"Created PaymentIntent {payment_intent.id} for {payment_type} amount {final_amount}")
         
         return jsonify({
             'client_secret': payment_intent.client_secret,
@@ -226,6 +304,34 @@ def create_payment_intent():
         
     except Exception as e:
         logger.error(f"Error creating payment intent: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/register-reader', methods=['POST'])
+def register_reader():
+    try:
+        data = request.json
+        registration_code = data.get('registration_code')
+        
+        if not registration_code:
+            return jsonify({'error': 'Registration code is required'}), 400
+        
+        reader = stripe.terminal.Reader.create(
+            registration_code=registration_code,
+            location=STRIPE_LOCATION_ID
+        )
+        
+        logger.info(f"Successfully registered reader {reader.id} with code {registration_code}")
+        
+        return jsonify({
+            'reader': {
+                'id': reader.id,
+                'label': reader.label or 'Stripe Reader',
+                'status': reader.status
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error registering reader: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/discover-readers', methods=['POST'])
