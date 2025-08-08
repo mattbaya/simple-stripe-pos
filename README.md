@@ -13,7 +13,8 @@ A lightweight, containerized point-of-sale application for the South Williamstow
 - Real-time fee calculation with transparent breakdown display
 - **Required email validation**: Ensures receipt delivery with HTML5 and JavaScript validation
 - Custom donation amounts with dynamic fee calculations
-- **Automatic email receipts** sent to donors using Gmail API with OAuth2
+- **Professional HTML email receipts** sent to donors with embedded letterhead using Gmail API with OAuth2
+- **Tax-compliant receipt format** with 501(c)(3) information and proper documentation
 - **Email notifications** sent to info@southwilliamstown.org
 - **Professional success modal** with organization logo and animated confirmation
 - **Automatic reader discovery**: Displays connected terminal status on page load
@@ -23,7 +24,54 @@ A lightweight, containerized point-of-sale application for the South Williamstow
 - No local database required - all data handled by Stripe
 - Containerized with Docker for easy deployment
 
-## Prerequisites
+## Requirements Checklist
+
+To deploy this POS system for your organization, you'll need to provide the following:
+
+### 1. Technical Infrastructure
+- [ ] **Docker & Docker Compose**: Installed on server
+- [ ] **Domain name**: For production deployment (e.g., reader.yourdomain.org)
+- [ ] **SSL certificate**: Automatic via Let's Encrypt/Caddy
+
+### 2. Payment Processing (Stripe)
+- [ ] **Stripe Account**: Live account with Terminal capability
+- [ ] **Stripe API Keys**: Secret and Publishable keys
+- [ ] **Stripe Terminal Location**: Physical location ID from Stripe
+- [ ] **Stripe S700 Terminal**: Hardware card reader
+- [ ] **Terminal Registration**: Reader registered to your Stripe location
+
+### 3. Email System (Gmail API)
+- [ ] **Google Cloud Project**: With Gmail API enabled
+- [ ] **OAuth2 Credentials**: Client ID and Client Secret
+- [ ] **OAuth2 Refresh Token**: Generated via setup script
+- [ ] **Gmail Account**: For sending receipts and notifications
+- [ ] **Sender Email Address**: For receipt "From" field
+- [ ] **Notification Email Address**: Where payment alerts are sent
+
+### 4. Organization Branding & Content
+- [ ] **Organization Name**: Full legal name
+- [ ] **Organization Website**: URL for receipts and branding
+- [ ] **Logo Image**: For web interface (PNG/JPG, ~150x150px)
+- [ ] **Letterhead Image**: For email receipts (PNG/JPG, landscape format)
+- [ ] **501(c)(3) Tax ID**: For tax-compliant receipts (if applicable)
+- [ ] **Donation Acknowledgment Text**: Custom message for donors
+- [ ] **Contact Email**: For donor questions and support
+
+### 5. Financial Configuration
+- [ ] **Membership Amounts**: Individual and household prices (in cents)
+- [ ] **Fee Coverage Policy**: Whether to offer Stripe fee coverage option
+- [ ] **Payment Processing Terms**: Legal compliance and policies
+
+### 6. Generic Example Assets (Provided)
+
+For organizations getting started, we provide generic examples:
+- [x] **Example Logo**: `static/example-logo.svg` (convert to PNG)
+- [x] **Example Letterhead**: `templates/example-letterhead.svg` (convert to PNG)  
+- [x] **Generic Email Template**: `templates/donor_acknowledgment_email_template.html`
+- [x] **Graphics Setup Guide**: `GRAPHICS_SETUP.md` with detailed instructions
+- [x] **Sample Donor Text**: Based on standard 501(c)(3) language
+
+## Prerequisites (SWCA-Specific)
 
 1. **Stripe Account**: Live account with Terminal enabled ✅
 2. **Stripe S700 Terminal**: SWCA S700 Reader (tmr_GJIc8gfqlW1SF1) - Online ✅
@@ -229,7 +277,11 @@ docker compose down
 1. Customer inserts, taps, or swipes card on S700 terminal
 2. Terminal processes payment through Stripe
 3. Professional success modal appears with organization branding
-4. Receipt email automatically sent to donor (email is required)
+4. **Professional HTML receipt email** automatically sent to donor with:
+   - Embedded SWCA letterhead image
+   - Tax-compliant 501(c)(3) receipt information
+   - Transaction details and professional formatting
+   - Consistent organization branding
 5. Notification email automatically sent to organization
 
 ## Management Commands
@@ -385,12 +437,15 @@ pos-docker/
 ├── app/
 │   └── main.py              # Flask application
 ├── templates/
-│   └── index.html           # Web interface
+│   ├── index.html           # Web interface
+│   ├── donor_acknowledgment_email.html # Professional HTML email template
+│   └── donor_acknowledgment_email_template.html # Generic template for other orgs
 ├── static/                  # Static assets (currently empty)
 ├── docker-compose.yml       # Docker Compose configuration
 ├── Dockerfile              # Container image definition
 ├── requirements.txt        # Python dependencies
 ├── .env                    # Environment variables (create this)
+├── donor-ack.txt           # Source text for donation acknowledgment
 └── README.md               # This file
 ```
 

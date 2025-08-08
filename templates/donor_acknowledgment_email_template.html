@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank You for Your Donation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .email-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .letterhead {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .letterhead img {
+            max-width: 100%;
+            height: auto;
+        }
+        .date {
+            text-align: right;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .greeting {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .content p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        .donation-details {
+            background-color: #f0f8ff;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+        }
+        .tax-info {
+            background-color: #fff8dc;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        .signature {
+            margin-top: 30px;
+        }
+        .contact-info {
+            font-size: 14px;
+            color: #666;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="letterhead">
+            <!-- Replace with your organization's letterhead image -->
+            <img src="cid:letterhead" alt="Your Organization Name">
+        </div>
+        
+        <div class="date">{payment_date}</div>
+        
+        <div class="greeting">
+            Dear {donor_name},
+        </div>
+        
+        <div class="content">
+            <p>Thank you very much for your generous contribution of <strong>{donation_amount}</strong> to [Your Organization Name]. Your donation is greatly appreciated and will support our mission to [describe your organization's mission and purpose].</p>
+            
+            <div class="donation-details">
+                <strong>Donation Details:</strong><br>
+                Date: {payment_date}<br>
+                Amount: {donation_amount}<br>
+                Payment Method: Mobile card reader at community event
+            </div>
+            
+            <p>Your donation was received by [Your Organization Name]. [Your Organization Name] is recognized as a tax-exempt organization under section 501(c)(3) of the Internal Revenue Code and can accept tax-deductible donations in accordance with the Internal Revenue Service requirements.</p>
+            
+            <div class="tax-info">
+                <strong>Tax Receipt Information:</strong><br>
+                This letter is your receipt for income tax purposes. No goods or services were provided to you by [Your Organization Name] in return for your gift. For your records, [Your Organization Name]'s Tax ID Number is <strong>[Your Tax ID Number]</strong>. Please print this page and keep it with your tax records.
+            </div>
+            
+            <p>If you have any questions, please email <a href="mailto:[your-email@example.com]">[your-email@example.com]</a>.</p>
+            
+            <p>On behalf of the entire [community/organization], we wish to express our sincere gratitude for your contribution.</p>
+        </div>
+        
+        <div class="signature">
+            <p>Sincerely,</p>
+            <p><strong>[President/Director Name], [Title]</strong><br>
+            [Your Organization Name]</p>
+        </div>
+        
+        <div class="contact-info">
+            <p><em>This is an automated receipt. Please retain this email for your tax records.</em></p>
+        </div>
+    </div>
+</body>
+</html>

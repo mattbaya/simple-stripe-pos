@@ -7,6 +7,7 @@ import csv
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.image import MIMEImage
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from urllib.parse import urlparse
 import stripe
@@ -151,8 +152,8 @@ def get_gmail_credentials():
         logger.error(f"Failed to get Gmail credentials: {str(e)}")
         return None
 
-def send_email(to_email, subject, body, is_html=False):
-    """Send an email using Gmail API"""
+def send_email(to_email, subject, body, is_html=False, attachments=None):
+    """Send an email using Gmail API with optional attachments"""
     if not FROM_EMAIL:
         logger.warning("FROM_EMAIL not configured - skipping email send")
         return False
@@ -171,7 +172,11 @@ def send_email(to_email, subject, body, is_html=False):
         service = build('gmail', 'v1', credentials=credentials)
         
         # Create message
-        msg = email.mime.multipart.MIMEMultipart('alternative')
+        if attachments:
+            msg = email.mime.multipart.MIMEMultipart('related')
+        else:
+            msg = email.mime.multipart.MIMEMultipart('alternative')
+            
         msg['From'] = FROM_EMAIL
         msg['To'] = to_email
         msg['Subject'] = subject
@@ -180,6 +185,11 @@ def send_email(to_email, subject, body, is_html=False):
             msg.attach(email.mime.text.MIMEText(body, 'html'))
         else:
             msg.attach(email.mime.text.MIMEText(body, 'plain'))
+        
+        # Add attachments if provided
+        if attachments:
+            for attachment in attachments:
+                msg.attach(attachment)
         
         # Encode message
         raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
@@ -198,84 +208,64 @@ def send_email(to_email, subject, body, is_html=False):
         return False
 
 def send_receipt_email(payer_email, payer_name, amount, payment_type, transaction_id):
-    """Send receipt email to the donor"""
+    """Send receipt email to the donor using HTML template with letterhead"""
     if not payer_email:
         return False
     
     amount_dollars = amount / 100
-    date_str = datetime.now().strftime('%B %d, %Y at %I:%M %p')
+    date_str = datetime.now().strftime('%B %d, %Y')
     
-    subject = f"Receipt for your {payment_type} - {ORGANIZATION_NAME}"
+    subject = f"Thank you for your {payment_type} - {ORGANIZATION_NAME}"
     
-    # Build logo HTML if available
-    logo_html = ""
-    if ORGANIZATION_LOGO and not ORGANIZATION_LOGO.startswith('/static/'):
-        logo_html = f'<img src="{ORGANIZATION_LOGO}" alt="{ORGANIZATION_NAME}" style="max-width: 150px; height: auto; margin-bottom: 20px;">'
-    
-    # Include custom header HTML if provided
-    header_html = EMAIL_HEADER_HTML if EMAIL_HEADER_HTML else ""
-    
-    body = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
-        {header_html}
+    # Load the HTML template
+    try:
+        template_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'donor_acknowledgment_email.html')
+        with open(template_path, 'r', encoding='utf-8') as f:
+            html_template = f.read()
         
-        <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c5aa0; padding-bottom: 20px;">
-            {logo_html}
-            <h1 style="color: #2c5aa0; margin: 10px 0;">{ORGANIZATION_NAME}</h1>
-            <h2 style="color: #666; margin: 5px 0;">Payment Receipt</h2>
-        </div>
+        # Replace template variables
+        html_body = html_template.format(
+            donor_name=payer_name,
+            donation_amount=f"${amount_dollars:.2f}",
+            payment_date=date_str
+        )
         
-        <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #28a745;">
-            <h3 style="margin-top: 0; color: #28a745; font-size: 18px;">Thank you for your {payment_type}!</h3>
-            <div style="margin: 15px 0;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Name:</strong></td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">{payer_name}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Amount:</strong></td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6; color: #28a745; font-weight: bold; font-size: 16px;">${amount_dollars:.2f}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Type:</strong></td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">{payment_type.title()}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Date:</strong></td>
-                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">{date_str}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 8px 0;"><strong>Transaction ID:</strong></td>
-                        <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{transaction_id}</td>
-                    </tr>
-                </table>
-            </div>
-        </div>
+        # Prepare letterhead image attachment
+        attachments = []
+        letterhead_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'SWCA-letterhead-v3-1024x224.png')
         
-        <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 25px;">
-            <p style="margin: 0; color: #856404; font-size: 14px;">
-                <strong>Important:</strong> This receipt serves as confirmation of your payment. 
-                Please keep this for your records and tax purposes.
-            </p>
-        </div>
+        if os.path.exists(letterhead_path):
+            with open(letterhead_path, 'rb') as f:
+                img_data = f.read()
+            
+            letterhead_img = MIMEImage(img_data)
+            letterhead_img.add_header('Content-ID', '<letterhead>')
+            letterhead_img.add_header('Content-Disposition', 'inline', filename='letterhead.png')
+            attachments.append(letterhead_img)
+        else:
+            logger.warning(f"Letterhead image not found at {letterhead_path}")
         
-        <div style="border-top: 1px solid #ddd; padding-top: 20px; font-size: 14px; color: #666;">
-            <p>If you have any questions about this transaction, please contact us at 
-            <a href="mailto:{NOTIFICATION_EMAIL}" style="color: #2c5aa0;">{NOTIFICATION_EMAIL}</a></p>
-            {f'<p>Visit our website: <a href="{ORGANIZATION_WEBSITE}" style="color: #2c5aa0;">{ORGANIZATION_WEBSITE}</a></p>' if ORGANIZATION_WEBSITE else ''}
-        </div>
+        return send_email(payer_email, subject, html_body, is_html=True, attachments=attachments)
         
-        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #999;">
-            <p><strong>{ORGANIZATION_NAME}</strong><br>
-            Thank you for supporting our community!</p>
-        </div>
-    </body>
-    </html>
-    """
-    
-    return send_email(payer_email, subject, body, is_html=True)
+    except Exception as e:
+        logger.error(f"Error loading email template: {str(e)}")
+        # Fallback to simple email if template loading fails
+        fallback_body = f"""
+        <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h2>Thank you for your {payment_type}!</h2>
+            <p>Dear {payer_name},</p>
+            <p>Thank you for your generous {payment_type} of <strong>${amount_dollars:.2f}</strong> to {ORGANIZATION_NAME}.</p>
+            <p><strong>Transaction Details:</strong><br>
+            Date: {date_str}<br>
+            Amount: ${amount_dollars:.2f}<br>
+            Transaction ID: {transaction_id}</p>
+            <p>This serves as your receipt for tax purposes.</p>
+            <p>Sincerely,<br>{ORGANIZATION_NAME}</p>
+        </body>
+        </html>
+        """
+        return send_email(payer_email, subject, fallback_body, is_html=True)
 
 def calculate_fee_amount(base_amount_cents):
     """Calculate Stripe processing fee (2.9% + $0.30)"""

@@ -1,0 +1,14 @@
+<svg width="150" height="150" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="75" cy="75" r="70" fill="#2c5aa0" stroke="#1a3a6b" stroke-width="3"/>
+  
+  <!-- Inner circle -->
+  <circle cx="75" cy="75" r="50" fill="#ffffff" stroke="#2c5aa0" stroke-width="2"/>
+  
+  <!-- Organization initials or symbol -->
+  <text x="75" y="85" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#2c5aa0">YCA</text>
+  
+  <!-- Community text -->
+  <text x="75" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="normal" fill="#2c5aa0">COMMUNITY</text>
+  <text x="75" y="142" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" font-weight="normal" fill="#2c5aa0">ASSOCIATION</text>
+</svg>
