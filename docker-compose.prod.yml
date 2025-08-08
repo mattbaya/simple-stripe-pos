@@ -1,0 +1,72 @@
+services:
+  # Caddy reverse proxy with automatic HTTPS
+  caddy:
+    image: caddy:2.7-alpine
+    container_name: community-pos-proxy
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - caddy_logs:/var/log/caddy
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME}
+    networks:
+      - pos-network
+    depends_on:
+      - app
+
+  # Flask application (not exposed directly)
+  app:
+    build: .
+    container_name: community-pos-app
+    environment:
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
+      - STRIPE_LOCATION_ID=${STRIPE_LOCATION_ID}
+      - INDIVIDUAL_MEMBERSHIP_AMOUNT=${INDIVIDUAL_MEMBERSHIP_AMOUNT:-3500}
+      - HOUSEHOLD_MEMBERSHIP_AMOUNT=${HOUSEHOLD_MEMBERSHIP_AMOUNT:-5000}
+      - FLASK_ENV=production
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - FROM_EMAIL=${FROM_EMAIL}
+      - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL}
+      - ORGANIZATION_NAME=${ORGANIZATION_NAME}
+      - ORGANIZATION_LOGO=${ORGANIZATION_LOGO}
+      - ORGANIZATION_WEBSITE=${ORGANIZATION_WEBSITE}
+      - DOMAIN_NAME=${DOMAIN_NAME}
+      - EMAIL_HEADER_HTML=${EMAIL_HEADER_HTML}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN}
+      - LOG_DIR=/app/logs
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - transaction_logs:/app/logs
+      - ./static:/app/static:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - pos-network
+
+volumes:
+  caddy_data:
+    external: false
+  caddy_config:
+    external: false
+  caddy_logs:
+    external: false
+  transaction_logs:
+    external: false
+
+networks:
+  pos-network:
+    driver: bridge

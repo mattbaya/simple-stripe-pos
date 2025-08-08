@@ -1,6 +1,8 @@
-# Community POS System
+# South Williamstown Community Association - POS System
 
-A lightweight, containerized point-of-sale application for community organizations to process in-person donations and membership payments using Stripe Terminal hardware.
+A lightweight, containerized point-of-sale application for the South Williamstown Community Association to process in-person donations and membership payments using Stripe Terminal hardware.
+
+**Production URL**: https://reader.southwilliamstown.org:8080
 
 ## Features
 
@@ -12,16 +14,19 @@ A lightweight, containerized point-of-sale application for community organizatio
 - Collects payer name and optional email
 - Custom donation amounts with dynamic fee calculations
 - **Automatic email receipts** sent to donors using OAuth2-authenticated Gmail
-- **Email notifications** sent to configurable organization email
-- Customizable organization branding and logo
+- **Email notifications** sent to info@southwilliamstown.org
+- South Williamstown Community Association branding
+- **SSL/HTTPS**: Automatic certificate management via Caddy
+- **Domain enforcement**: Redirects to primary domain reader.southwilliamstown.org
 - No local database required - all data handled by Stripe
 - Containerized with Docker for easy deployment
 
 ## Prerequisites
 
-1. **Stripe Account**: You need a Stripe account with Terminal enabled
-2. **Stripe S700 Terminal**: Physical card reader device
-3. **Docker & Docker Compose**: Installed on your server
+1. **Stripe Account**: Live account with Terminal enabled ✅
+2. **Stripe S700 Terminal**: SWCA S700 Reader (tmr_GJIc8gfqlW1SF1) - Online ✅
+3. **Docker & Docker Compose**: Installed on server ✅
+4. **Domain**: reader.southwilliamstown.org configured ✅
 
 ## Stripe Setup
 
@@ -104,11 +109,11 @@ FROM_EMAIL=your_email@domain.com
 ```
 
 **Email Configuration Notes:**
-- OAuth2 is more secure than app passwords and works with Google Workspace
-- If OAuth2 isn't configured, the app will still work but won't send emails
-- Transaction notifications will always be sent to `info@southwilliamstown.org`
-- Receipts are only sent if the donor provides an email address
-- Refresh tokens don't expire unless revoked
+- OAuth2 is configured and working ✅
+- Gmail API credentials are properly set up
+- Transaction notifications are sent to info@southwilliamstown.org
+- Receipts are sent to donors who provide email addresses
+- OAuth2 refresh tokens don't expire unless revoked
 
 ## Installation & Configuration
 
@@ -132,38 +137,31 @@ pos-docker/
 └── README.md
 ```
 
-### 2. Configure Environment
+### 2. Environment Configuration
 
-Create a `.env` file in the project root:
-
-```bash
-cp env-template .env
-```
-
-Edit `.env` with your Stripe credentials:
+The `.env` file is already configured with:
 
 ```env
-# Stripe API Keys (get from Stripe Dashboard → Developers → API keys)
-STRIPE_SECRET_KEY=sk_test_...  # Use sk_live_... for production
-STRIPE_PUBLISHABLE_KEY=pk_test_...  # Use pk_live_... for production
-
-# Location ID (get from Stripe Dashboard → Terminal → Locations)
-STRIPE_LOCATION_ID=tml_...
+# Stripe Configuration (Live Keys)
+STRIPE_SECRET_KEY=sk_live_... # ✅ Configured
+STRIPE_PUBLISHABLE_KEY=pk_live_... # ✅ Configured
+STRIPE_LOCATION_ID=tml_GJFbNglXXR3JXh # ✅ Configured
 
 # Membership amounts in cents
 INDIVIDUAL_MEMBERSHIP_AMOUNT=3500  # $35.00
 HOUSEHOLD_MEMBERSHIP_AMOUNT=5000   # $50.00
 
-# Email Configuration (for receipts and notifications)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-FROM_EMAIL=payments@yourcommunity.org
-NOTIFICATION_EMAIL=treasurer@yourcommunity.org
-ORGANIZATION_NAME=Your Community Organization
-ORGANIZATION_LOGO=/static/logo.png
-ORGANIZATION_WEBSITE=https://yourcommunity.org
+# Organization Configuration
+ORGANIZATION_NAME="South Williamstown Community Association"
+ORGANIZATION_WEBSITE=https://southwilliamstown.org
+DOMAIN_NAME=reader.southwilliamstown.org
+
+# Email Configuration (OAuth2)
+FROM_EMAIL=info@southwilliamstown.org
+NOTIFICATION_EMAIL=info@southwilliamstown.org
+GOOGLE_CLIENT_ID=... # ✅ Configured
+GOOGLE_CLIENT_SECRET=... # ✅ Configured  
+GOOGLE_REFRESH_TOKEN=... # ✅ Configured
 ```
 
 ⚠️ **Security**: Never commit the `.env` file to version control. Keep your API keys secure.
@@ -172,26 +170,40 @@ ORGANIZATION_WEBSITE=https://yourcommunity.org
 
 From the `/home/swca/pos-docker/` directory:
 
+**Development:**
 ```bash
-# Start the application
 docker compose up -d
+```
+Available at: `http://localhost:8080`
 
-# Check if it's running
+**Production:**
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
+Available at:
+- HTTP: `http://localhost:8080` (redirects to HTTPS)
+- HTTPS: `https://localhost:8443`
+- Production: `https://reader.southwilliamstown.org:8080`
+
+**Management:**
+```bash
+# Check status
 docker compose ps
 
 # View logs
 docker compose logs -f
-```
 
-The application will be available at: `http://localhost:8080`
+# Stop
+docker compose down
+```
 
 ## Usage
 
 ### For Event Volunteers
 
-1. Open the web interface in a browser
-2. Click "Find Readers" to detect your Stripe terminal
-3. Select your terminal from the list
+1. Open https://reader.southwilliamstown.org:8080 in a browser
+2. Click "Find Readers" to detect the SWCA S700 Reader
+3. Select "SWCA S700 Reader" from the list
 4. For donations:
    - Click "Make a Donation"
    - Enter payer's name and optional email
@@ -240,10 +252,15 @@ curl http://localhost:8080/health
 
 ### Terminal Not Found
 
+**Current Setup:**
+- Reader: SWCA S700 Reader (tmr_GJIc8gfqlW1SF1)
+- Status: Online ✅
+- Location: tml_GJFbNglXXR3JXh ✅
+
+**If issues occur:**
 - Ensure S700 is powered on and connected to WiFi
-- Check that terminal is registered and assigned to correct location
-- Verify `STRIPE_LOCATION_ID` in `.env` file
 - Try refreshing the "Find Readers" in the web interface
+- Check Stripe Dashboard → Terminal → Readers for status
 
 ### Payment Failures
 
@@ -291,11 +308,13 @@ curl http://localhost:8080/health
 
 ## Security Considerations
 
-- Keep Stripe API keys secure and never commit them to version control
-- Use test mode during development and switch to live mode only for production
-- The application runs on port 8080 - restrict access as needed
-- Consider using HTTPS in production (add a reverse proxy like nginx)
-- Regularly update dependencies for security patches
+- Stripe live API keys are properly configured ✅
+- Production environment with live payments ✅
+- HTTPS enabled with automatic SSL certificates via Caddy ✅
+- Security headers and domain enforcement ✅
+- OAuth2 authentication for email services ✅
+- Environment files (.env) are gitignored ✅
+- Regular dependency updates recommended
 
 ## Customization
 

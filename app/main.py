@@ -3,10 +3,12 @@ import logging
 import smtplib
 import json
 import base64
+import csv
 from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+from urllib.parse import urlparse
 import stripe
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -31,6 +33,8 @@ NOTIFICATION_EMAIL = os.getenv('NOTIFICATION_EMAIL')
 ORGANIZATION_NAME = os.getenv('ORGANIZATION_NAME', 'Community Organization')
 ORGANIZATION_LOGO = os.getenv('ORGANIZATION_LOGO', '/static/logo.png')
 ORGANIZATION_WEBSITE = os.getenv('ORGANIZATION_WEBSITE', '')
+DOMAIN_NAME = os.getenv('DOMAIN_NAME', '')  # Primary domain (e.g., pos.yourcommunity.org)
+EMAIL_HEADER_HTML = os.getenv('EMAIL_HEADER_HTML', '')  # Custom HTML for email headers
 
 # OAuth2 configuration
 GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
@@ -39,6 +43,86 @@ GOOGLE_REFRESH_TOKEN = os.getenv('GOOGLE_REFRESH_TOKEN')
 
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
+
+# Transaction logging directory
+LOG_DIR = os.getenv('LOG_DIR', '/app/logs')
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
+
+def check_domain_redirect():
+    """Check if request should be redirected to primary domain"""
+    if not DOMAIN_NAME:
+        return None
+    
+    # Get the host from the request
+    host = request.host.lower()
+    primary_domain = DOMAIN_NAME.lower()
+    
+    # Remove port number if present for comparison
+    host_without_port = host.split(':')[0]
+    primary_without_port = primary_domain.split(':')[0]
+    
+    # If accessing from wrong domain, redirect
+    if host_without_port != primary_without_port and host_without_port != 'localhost':
+        redirect_url = f"https://{primary_domain}{request.full_path.rstrip('?')}"
+        return redirect(redirect_url, code=301)
+    
+    # Force HTTPS redirect if not localhost
+    if not request.is_secure and host_without_port != 'localhost':
+        redirect_url = f"https://{host}{request.full_path.rstrip('?')}"
+        return redirect(redirect_url, code=301)
+    
+    return None
+
+def log_transaction(payment_intent_id, payer_name, payer_email, amount, payment_type, status, metadata=None):
+    """Log transaction details (no sensitive payment info)"""
+    try:
+        log_file = os.path.join(LOG_DIR, f"transactions_{datetime.now().strftime('%Y-%m')}.csv")
+        
+        # Create CSV headers if file doesn't exist
+        file_exists = os.path.isfile(log_file)
+        
+        with open(log_file, 'a', newline='', encoding='utf-8') as csvfile:
+            fieldnames = [
+                'timestamp', 'payment_intent_id', 'payer_name', 'payer_email', 
+                'amount_cents', 'amount_dollars', 'payment_type', 'status',
+                'cover_fees', 'base_amount', 'fee_amount'
+            ]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            
+            if not file_exists:
+                writer.writeheader()
+            
+            # Extract metadata
+            cover_fees = metadata.get('cover_fees', 'false') if metadata else 'false'
+            base_amount = metadata.get('base_amount', str(amount)) if metadata else str(amount)
+            fee_amount = metadata.get('fee_amount', '0') if metadata else '0'
+            
+            writer.writerow({
+                'timestamp': datetime.now().isoformat(),
+                'payment_intent_id': payment_intent_id,
+                'payer_name': payer_name,
+                'payer_email': payer_email or '',
+                'amount_cents': amount,
+                'amount_dollars': f"{amount/100:.2f}",
+                'payment_type': payment_type,
+                'status': status,
+                'cover_fees': cover_fees,
+                'base_amount': base_amount,
+                'fee_amount': fee_amount
+            })
+            
+        logger.info(f"Transaction logged: {payment_intent_id} - ${amount/100:.2f}")
+        
+    except Exception as e:
+        logger.error(f"Error logging transaction: {str(e)}")
+
+@app.before_request
+def before_request():
+    """Handle domain redirects before processing requests"""
+    redirect_response = check_domain_redirect()
+    if redirect_response:
+        return redirect_response
 
 def get_gmail_credentials():
     """Get valid Gmail credentials using OAuth2"""
@@ -118,30 +202,68 @@ def send_receipt_email(payer_email, payer_name, amount, payment_type, transactio
     
     subject = f"Receipt for your {payment_type} - {ORGANIZATION_NAME}"
     
+    # Build logo HTML if available
+    logo_html = ""
+    if ORGANIZATION_LOGO and not ORGANIZATION_LOGO.startswith('/static/'):
+        logo_html = f'<img src="{ORGANIZATION_LOGO}" alt="{ORGANIZATION_NAME}" style="max-width: 150px; height: auto; margin-bottom: 20px;">'
+    
+    # Include custom header HTML if provided
+    header_html = EMAIL_HEADER_HTML if EMAIL_HEADER_HTML else ""
+    
     body = f"""
     <html>
-    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="text-align: center; margin-bottom: 30px;">
-            <h1 style="color: #2c5aa0;">{ORGANIZATION_NAME}</h1>
-            <h2 style="color: #666;">Payment Receipt</h2>
+    <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+        {header_html}
+        
+        <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #2c5aa0; padding-bottom: 20px;">
+            {logo_html}
+            <h1 style="color: #2c5aa0; margin: 10px 0;">{ORGANIZATION_NAME}</h1>
+            <h2 style="color: #666; margin: 5px 0;">Payment Receipt</h2>
         </div>
         
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h3 style="margin-top: 0; color: #28a745;">Thank you for your {payment_type}!</h3>
-            <p><strong>Name:</strong> {payer_name}</p>
-            <p><strong>Amount:</strong> ${amount_dollars:.2f}</p>
-            <p><strong>Type:</strong> {payment_type.title()}</p>
-            <p><strong>Date:</strong> {date_str}</p>
-            <p><strong>Transaction ID:</strong> {transaction_id}</p>
+        <div style="background-color: #f8f9fa; padding: 25px; border-radius: 10px; margin-bottom: 25px; border-left: 4px solid #28a745;">
+            <h3 style="margin-top: 0; color: #28a745; font-size: 18px;">Thank you for your {payment_type}!</h3>
+            <div style="margin: 15px 0;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Name:</strong></td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">{payer_name}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Amount:</strong></td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6; color: #28a745; font-weight: bold; font-size: 16px;">${amount_dollars:.2f}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Type:</strong></td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">{payment_type.title()}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;"><strong>Date:</strong></td>
+                        <td style="padding: 8px 0; border-bottom: 1px solid #dee2e6;">{date_str}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0;"><strong>Transaction ID:</strong></td>
+                        <td style="padding: 8px 0; font-family: monospace; font-size: 12px;">{transaction_id}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        
+        <div style="background-color: #fff3cd; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 25px;">
+            <p style="margin: 0; color: #856404; font-size: 14px;">
+                <strong>Important:</strong> This receipt serves as confirmation of your payment. 
+                Please keep this for your records and tax purposes.
+            </p>
         </div>
         
         <div style="border-top: 1px solid #ddd; padding-top: 20px; font-size: 14px; color: #666;">
-            <p>This receipt serves as confirmation of your payment. Please keep this for your records.</p>
-            <p>If you have any questions, please contact us at {NOTIFICATION_EMAIL}</p>
+            <p>If you have any questions about this transaction, please contact us at 
+            <a href="mailto:{NOTIFICATION_EMAIL}" style="color: #2c5aa0;">{NOTIFICATION_EMAIL}</a></p>
+            {f'<p>Visit our website: <a href="{ORGANIZATION_WEBSITE}" style="color: #2c5aa0;">{ORGANIZATION_WEBSITE}</a></p>' if ORGANIZATION_WEBSITE else ''}
         </div>
         
-        <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #999;">
-            <p>{ORGANIZATION_NAME}<br>
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #999;">
+            <p><strong>{ORGANIZATION_NAME}</strong><br>
             Thank you for supporting our community!</p>
         </div>
     </body>
@@ -337,20 +459,41 @@ def register_reader():
 @app.route('/discover-readers', methods=['POST'])
 def discover_readers():
     try:
+        logger.info(f"Searching for readers in location: {STRIPE_LOCATION_ID}")
+        logger.info(f"Using API key: {stripe.api_key[:12]}...")  # First 12 chars only
+        
+        # First, let's try to list all readers (no location filter) to debug
+        all_readers = stripe.terminal.Reader.list()
+        logger.info(f"Total readers in account: {len(all_readers.data)}")
+        
+        for reader in all_readers.data:
+            logger.info(f"Reader {reader.id}: location={reader.location}, status={reader.status}, type={reader.device_type}")
+        
+        # Now list readers in the specific location
         readers = stripe.terminal.Reader.list(
             location=STRIPE_LOCATION_ID
         )
         
-        logger.info(f"Found {len(readers.data)} readers")
+        logger.info(f"Found {len(readers.data)} readers in location {STRIPE_LOCATION_ID}")
+        
+        reader_list = []
+        for reader in readers.data:
+            reader_info = {
+                'id': reader.id,
+                'label': reader.label or 'Stripe Reader',
+                'status': reader.status,
+                'device_type': reader.device_type,
+                'serial_number': reader.serial_number[-4:] if reader.serial_number else 'N/A',  # Last 4 digits only
+                'location': reader.location
+            }
+            reader_list.append(reader_info)
+            logger.info(f"Reader found: {reader.label} ({reader.device_type}) - Status: {reader.status}")
         
         return jsonify({
-            'readers': [
-                {
-                    'id': reader.id,
-                    'label': reader.label or 'Stripe Reader',
-                    'status': reader.status
-                } for reader in readers.data
-            ]
+            'readers': reader_list,
+            'location_id': STRIPE_LOCATION_ID,
+            'total_readers_in_account': len(all_readers.data),
+            'debug_all_readers': [{'id': r.id, 'location': r.location, 'status': r.status} for r in all_readers.data]
         })
         
     except Exception as e:
@@ -396,6 +539,13 @@ def payment_status(payment_intent_id):
             payer_email = payment_intent.metadata.get('payer_email')
             payment_type = payment_intent.metadata.get('payment_type', 'payment')
             
+            # Log successful transaction
+            log_transaction(
+                payment_intent_id, payer_name, payer_email, 
+                payment_intent.amount, payment_type, 'succeeded', 
+                payment_intent.metadata
+            )
+            
             # Send emails
             receipt_sent = False
             notification_sent = False
@@ -424,6 +574,18 @@ def payment_status(payment_intent_id):
                 )
             except Exception as e:
                 logger.error(f"Error updating payment intent metadata: {str(e)}")
+        
+        # Log failed/canceled transactions
+        elif payment_intent.status in ['canceled', 'payment_failed']:
+            payer_name = payment_intent.metadata.get('payer_name', 'Unknown')
+            payer_email = payment_intent.metadata.get('payer_email')
+            payment_type = payment_intent.metadata.get('payment_type', 'payment')
+            
+            log_transaction(
+                payment_intent_id, payer_name, payer_email,
+                payment_intent.amount, payment_type, payment_intent.status,
+                payment_intent.metadata
+            )
         
         return jsonify({
             'status': payment_intent.status,
