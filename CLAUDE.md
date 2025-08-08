@@ -1,20 +1,23 @@
 # Community POS System - Project Context
 
 ## Overview
-This is a Flask-based point-of-sale system for community organizations that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. Features optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30) with transparent cost breakdown.
+This is a Flask-based point-of-sale system for the South Williamstown Community Association that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. Features optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30) with transparent cost breakdown.
 
 ## Technology Stack
 - **Backend**: Python Flask web application
 - **Payment Processing**: Stripe Terminal API (v8.11.0) with S700 card reader
 - **Email**: OAuth2-authenticated Gmail API for receipts and notifications
-- **Deployment**: Docker containers with Docker Compose
+- **Deployment**: Docker containers with Caddy reverse proxy for SSL
 - **Frontend**: Bootstrap-based web interface with JavaScript
 - **Fee Calculation**: Real-time Stripe fee calculations with optional coverage
+- **SSL**: Automatic HTTPS with Let's Encrypt via Caddy
 
 ## Key Files
 - `app/main.py` - Main Flask application with payment processing logic
 - `templates/index.html` - Web interface for payment collection
-- `docker-compose.yml` - Container orchestration
+- `docker-compose.yml` - Development container orchestration
+- `docker-compose.prod.yml` - Production setup with Caddy SSL proxy
+- `Caddyfile` - Caddy configuration for SSL and reverse proxy
 - `requirements.txt` - Python dependencies
 - `generate_oauth_token.py` - OAuth2 setup utility
 
@@ -25,15 +28,23 @@ The application requires these environment variables:
 - `INDIVIDUAL_MEMBERSHIP_AMOUNT` - Individual membership price (cents, default: 3500)
 - `HOUSEHOLD_MEMBERSHIP_AMOUNT` - Household membership price (cents, default: 5000)
 - `ORGANIZATION_NAME/LOGO/WEBSITE` - Branding configuration
+- `DOMAIN_NAME` - Primary domain (reader.southwilliamstown.org)
 - `NOTIFICATION_EMAIL` - Organization notification recipient
 - `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN` - OAuth2 credentials
 - `FROM_EMAIL` - Sender email address
 
 ## Development Commands
-- Start: `docker compose up -d`
+- Start development: `docker compose up -d`
+- Start production: `docker compose -f docker-compose.prod.yml up -d`
 - Logs: `docker compose logs -f` 
 - Stop: `docker compose down`
 - Health check: `curl http://localhost:8080/health`
+
+## Production Deployment
+- Domain: `reader.southwilliamstown.org:8080`
+- Production runs on ports 8080 (HTTP) and 8443 (HTTPS)
+- Caddy handles SSL certificates automatically via Let's Encrypt
+- Application enforces HTTPS redirects and domain consistency
 
 ## Payment Flow
 1. User selects donation or membership (individual/household) on web interface
@@ -61,9 +72,16 @@ The application requires these environment variables:
 - Payment metadata tracks fee information for reporting
 - Works for both donations and memberships
 
+## Hardware Setup
+- **Card Reader**: Stripe S700 Terminal (SWCA S700 Reader)
+- **Reader ID**: tmr_GJIc8gfqlW1SF1
+- **Status**: Online and registered to location tml_GJFbNglXXR3JXh
+- **Serial**: ...4847
+
 ## Security Notes
 - Environment files (.env*) are gitignored
 - Uses OAuth2 for secure Gmail authentication
 - Stripe handles all sensitive payment data
-- Application runs on port 8080 with health checks
-- Organization-neutral design with configurable branding
+- Automatic HTTPS with security headers via Caddy
+- Domain enforcement and HTTPS redirect
+- Application designed for South Williamstown Community Association

@@ -18,9 +18,18 @@ FLASK_ENV=production
 
 # Organization Details
 ORGANIZATION_NAME=Your Community Organization
-ORGANIZATION_LOGO=/static/logo.png
+ORGANIZATION_LOGO=https://yourcommunity.org/logo.png  # Full URL for emails, or /static/logo.png for local
 ORGANIZATION_WEBSITE=https://yourcommunity.org
 NOTIFICATION_EMAIL=treasurer@yourcommunity.org
+
+# Domain and SSL Configuration
+DOMAIN_NAME=pos.yourcommunity.org  # Primary domain for HTTPS/SSL
+
+# Custom Email Header (optional HTML snippet)
+EMAIL_HEADER_HTML=""  # e.g., "<div style='background:#f0f0f0;padding:10px;'>Custom Header</div>"
+
+# Reader Configuration (for remote readers)
+DEFAULT_READER_ID=""  # Optional: Your S700 reader ID if known
 
 # Email Configuration (for receipts and notifications)
 # SMTP settings
