@@ -1,14 +1,13 @@
 # Caddyfile for automatic HTTPS with Let's Encrypt
-{$DOMAIN_NAME:localhost} {
-    # Enable automatic HTTPS with Let's Encrypt
-    tls {
-        # Use Let's Encrypt for automatic SSL certificates
-        # Will automatically redirect HTTP to HTTPS
-        protocols tls1.2 tls1.3
-    }
+{
+    email info@southwilliamstown.org
+}
+
+reader.southwilliamstown.org:8080 {
+    # Automatic Let's Encrypt certificate
     
-    # Reverse proxy to Flask app
-    reverse_proxy app:5000 {
+    # Reverse proxy to Flask app (host networking)
+    reverse_proxy localhost:5000 {
         # Health check
         health_uri /health
         health_interval 30s
@@ -41,16 +40,6 @@
         X-Content-Type-Options "nosniff"
         X-XSS-Protection "1; mode=block"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' cdn.jsdelivr.net; connect-src 'self'"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' cdn.jsdelivr.net js.stripe.com; style-src 'self' 'unsafe-inline' cdn.jsdelivr.net; img-src 'self' data: https:; font-src 'self' cdn.jsdelivr.net; connect-src 'self' api.stripe.com"
     }
-}
-
-# Redirect any other domains to primary domain (if DOMAIN_NAME is set)
-*.{$DOMAIN_NAME:localhost}, {$DOMAIN_NAME:localhost}:443 {
-    redir https://{$DOMAIN_NAME}{uri} permanent
-}
-
-# Force HTTPS redirect for any HTTP traffic
-http:// {
-    redir https://{host}{uri} permanent
 }

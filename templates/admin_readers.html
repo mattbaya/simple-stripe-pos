@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Card Readers</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .admin-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 40px;
+            margin-top: 50px;
+        }
+        
+        .reader-button {
+            padding: 20px;
+            font-size: 1.2rem;
+            margin: 10px 0;
+        }
+        
+        .reader-item {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin: 10px 0;
+            background: #f8f9fa;
+        }
+        
+        .reader-item.selected {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="admin-container">
+                    <h1 class="text-center mb-4">Card Reader Management</h1>
+                    <p class="text-center text-muted">Admin interface for managing Stripe card readers</p>
+                    
+                    <!-- Status Messages -->
+                    <div id="status-message" style="display: none;"></div>
+                    
+                    <!-- Reader Discovery -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h3>Discover Readers</h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="reader-list">
+                                <button class="btn btn-primary reader-button w-100" onclick="discoverReaders()">
+                                    🔍 Find Readers
+                                </button>
+                                <button class="btn btn-outline-info mt-2 w-100" onclick="testConnectivity()">
+                                    🔧 Test Connectivity
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reader Registration -->
+                    <div class="card" id="registration-card" style="display: none;">
+                        <div class="card-header">
+                            <h3>Register Reader</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group mb-3">
+                                <label for="reader-label" class="form-label">Reader Label:</label>
+                                <input type="text" class="form-control" id="reader-label" placeholder="e.g., Front Counter Reader">
+                            </div>
+                            <div class="form-group mb-3">
+                                <label for="registration-code" class="form-label">Registration Code:</label>
+                                <input type="text" class="form-control" id="registration-code" placeholder="Enter code displayed on reader">
+                                <small class="form-text text-muted">Look for the registration code displayed on your Stripe Terminal reader</small>
+                            </div>
+                            <button class="btn btn-success" onclick="registerSelectedReader()">
+                                ✅ Register Reader
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        let terminal;
+        let discoveredReaders = [];
+        let selectedReader = null;
+        
+        // Stripe configuration
+        const stripePublishableKey = '{{ stripe_publishable_key }}';
+
+        // Function to load Stripe Terminal SDK
+        function loadStripeTerminal() {
+            return new Promise((resolve, reject) => {
+                if (typeof StripeTerminal !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'https://js.stripe.com/terminal/v1/';
+                script.onload = () => {
+                    if (typeof StripeTerminal !== 'undefined') {
+                        resolve();
+                    } else {
+                        reject(new Error('StripeTerminal not available after loading'));
+                    }
+                };
+                script.onerror = () => reject(new Error('Failed to load Stripe Terminal SDK'));
+                document.head.appendChild(script);
+            });
+        }
+
+        // Initialize Stripe Terminal
+        async function initializeTerminal() {
+            if (!terminal) {
+                // First ensure StripeTerminal is loaded
+                await loadStripeTerminal();
+                
+                terminal = StripeTerminal.create({
+                    onFetchConnectionToken: fetchConnectionToken,
+                    onUnexpectedReaderDisconnect: unexpectedDisconnect,
+                });
+            }
+        }
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.textContent = message;
+            statusDiv.style.display = 'block';
+        }
+
+        // Hide status message
+        function hideStatus() {
+            document.getElementById('status-message').style.display = 'none';
+        }
+
+        // Fetch connection token for Stripe Terminal
+        async function fetchConnectionToken() {
+            try {
+                const response = await fetch('/create-connection-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                return data.secret;
+            } catch (error) {
+                showStatus('Failed to get connection token: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        // Handle unexpected reader disconnect
+        function unexpectedDisconnect() {
+            showStatus('Reader disconnected unexpectedly!', 'error');
+        }
+
+        // Discover readers
+        async function discoverReaders() {
+            try {
+                await initializeTerminal();
+                showStatus('Searching for readers...', 'info');
+                
+                const discoverResult = await terminal.discoverReaders({
+                    simulated: false
+                });
+                
+                if (discoverResult.error) {
+                    throw new Error(discoverResult.error.message);
+                }
+                
+                discoveredReaders = discoverResult.discoveredReaders;
+                displayReaders();
+                
+            } catch (error) {
+                showStatus('Error discovering readers: ' + error.message, 'error');
+            }
+        }
+
+        // Display discovered readers
+        function displayReaders() {
+            const readerList = document.getElementById('reader-list');
+            
+            if (discoveredReaders.length === 0) {
+                readerList.innerHTML = `
+                    <div class="text-center">
+                        <p>No readers found.</p>
+                        <button class="btn btn-outline-primary" onclick="discoverReaders()">
+                            🔄 Search Again
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '<h5>Found Readers:</h5>';
+            discoveredReaders.forEach((reader, index) => {
+                html += `
+                    <div class="reader-item" onclick="selectReader(${index})" id="reader-${index}">
+                        <strong>${reader.label || 'Unnamed Reader'}</strong><br>
+                        <small>ID: ${reader.id}</small><br>
+                        <small>Status: ${reader.status}</small><br>
+                        <small>IP: ${reader.ip_address || 'N/A'}</small>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <button class="btn btn-outline-primary mt-3" onclick="discoverReaders()">
+                    🔄 Search Again
+                </button>
+            `;
+            
+            readerList.innerHTML = html;
+            showStatus(`Found ${discoveredReaders.length} reader(s)`, 'success');
+        }
+
+        // Select a reader
+        function selectReader(index) {
+            // Remove previous selection
+            document.querySelectorAll('.reader-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Add selection to clicked item
+            document.getElementById(`reader-${index}`).classList.add('selected');
+            selectedReader = discoveredReaders[index];
+            
+            // Show registration card
+            document.getElementById('registration-card').style.display = 'block';
+            document.getElementById('reader-label').value = selectedReader.label || '';
+            
+            showStatus('Reader selected. You can now register it.', 'info');
+        }
+
+        // Register selected reader
+        async function registerSelectedReader() {
+            if (!selectedReader) {
+                showStatus('Please select a reader first', 'error');
+                return;
+            }
+            
+            const label = document.getElementById('reader-label').value.trim();
+            if (!label) {
+                showStatus('Please enter a label for the reader', 'error');
+                return;
+            }
+            
+            const registrationCode = document.getElementById('registration-code').value.trim();
+            if (!registrationCode) {
+                showStatus('Please enter the registration code displayed on your reader', 'error');
+                return;
+            }
+            
+            try {
+                showStatus('Registering reader...', 'info');
+                
+                const response = await fetch('/register-reader', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reader_id: selectedReader.id,
+                        label: label,
+                        registration_code: registrationCode
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                showStatus(`Reader "${label}" registered successfully!`, 'success');
+                
+                // Connect to the reader
+                const connectResult = await terminal.connectReader(selectedReader);
+                if (connectResult.error) {
+                    showStatus('Reader registered but failed to connect: ' + connectResult.error.message, 'error');
+                } else {
+                    showStatus(`Reader "${label}" registered and connected successfully!`, 'success');
+                }
+                
+                // Reset form
+                document.getElementById('registration-card').style.display = 'none';
+                document.getElementById('registration-code').value = '';
+                selectedReader = null;
+                
+            } catch (error) {
+                showStatus('Error registering reader: ' + error.message, 'error');
+            }
+        }
+
+        // Test connectivity function
+        async function testConnectivity() {
+            showStatus('Testing connectivity...', 'info');
+            
+            try {
+                // Test connection token
+                const response = await fetch('/create-connection-token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                if (data.error) {
+                    showStatus('Connection token error: ' + data.error, 'error');
+                } else {
+                    showStatus('✅ Connection token works. Stripe key: ' + (stripePublishableKey ? 'Present' : 'Missing'), 'success');
+                }
+                
+                // Test Stripe Terminal loading
+                if (typeof StripeTerminal !== 'undefined') {
+                    showStatus('✅ Stripe Terminal SDK is loaded', 'success');
+                } else {
+                    showStatus('❌ Stripe Terminal SDK not loaded', 'error');
+                }
+                
+            } catch (error) {
+                showStatus('Connectivity test failed: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            showStatus('Loading Stripe Terminal SDK...', 'info');
+            
+            initializeTerminal()
+                .then(() => {
+                    showStatus('Stripe Terminal initialized successfully', 'success');
+                })
+                .catch(error => {
+                    console.error('Stripe Terminal initialization error:', error);
+                    showStatus('Failed to initialize Stripe Terminal: ' + error.message, 'error');
+                });
+        });
+    </script>
+</body>
+</html>

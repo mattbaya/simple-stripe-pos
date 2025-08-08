@@ -319,6 +319,25 @@ def index():
                          organization_logo=ORGANIZATION_LOGO,
                          organization_website=ORGANIZATION_WEBSITE)
 
+@app.route('/admin-readers')
+def admin_readers():
+    return render_template('admin_readers.html', 
+                         organization_name=ORGANIZATION_NAME,
+                         organization_logo=ORGANIZATION_LOGO,
+                         organization_website=ORGANIZATION_WEBSITE,
+                         stripe_publishable_key=os.getenv('STRIPE_PUBLISHABLE_KEY'))
+
+@app.route('/create-connection-token', methods=['POST'])
+def create_connection_token():
+    try:
+        connection_token = stripe.terminal.ConnectionToken.create(
+            location=STRIPE_LOCATION_ID
+        )
+        return jsonify({'secret': connection_token.secret})
+    except Exception as e:
+        logger.error(f"Error creating connection token: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/health')
 def health():
     return jsonify({'status': 'healthy'})
@@ -505,12 +524,19 @@ def process_payment():
     try:
         data = request.json
         payment_intent_id = data.get('payment_intent_id')
-        reader_id = data.get('reader_id')
         
-        if not payment_intent_id or not reader_id:
-            return jsonify({'error': 'Missing payment_intent_id or reader_id'}), 400
+        if not payment_intent_id:
+            return jsonify({'error': 'Missing payment_intent_id'}), 400
         
         payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        
+        # Get list of readers and use the first available one
+        readers = stripe.terminal.Reader.list(location=STRIPE_LOCATION_ID)
+        if not readers.data:
+            return jsonify({'error': 'No card readers available. Please set up a reader using the admin interface.'}), 400
+        
+        # Use the first available reader
+        reader_id = readers.data[0].id
         
         reader = stripe.terminal.Reader.process_payment_intent(
             reader_id,

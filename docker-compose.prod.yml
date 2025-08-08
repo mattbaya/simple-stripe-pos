@@ -4,9 +4,7 @@ services:
     image: caddy:2.7-alpine
     container_name: community-pos-proxy
     restart: unless-stopped
-    ports:
-      - "8080:80"
-      - "8443:443"
+    network_mode: host
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -14,8 +12,6 @@ services:
       - caddy_logs:/var/log/caddy
     environment:
       - DOMAIN_NAME=${DOMAIN_NAME}
-    networks:
-      - pos-network
     depends_on:
       - app
 
@@ -23,6 +19,7 @@ services:
   app:
     build: .
     container_name: community-pos-app
+    network_mode: host
     environment:
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
       - STRIPE_PUBLISHABLE_KEY=${STRIPE_PUBLISHABLE_KEY}
@@ -54,8 +51,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    networks:
-      - pos-network
 
 volumes:
   caddy_data:
@@ -67,6 +62,3 @@ volumes:
   transaction_logs:
     external: false
 
-networks:
-  pos-network:
-    driver: bridge
