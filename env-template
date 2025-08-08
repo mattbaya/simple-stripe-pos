@@ -9,8 +9,9 @@ STRIPE_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
 # Create a location first, then copy the ID (starts with tml_)
 STRIPE_LOCATION_ID=tml_your_location_id_here
 
-# Membership amount in cents (2000 = $20.00)
-MEMBERSHIP_AMOUNT=2000
+# Membership amounts in cents
+INDIVIDUAL_MEMBERSHIP_AMOUNT=3500  # $35.00
+HOUSEHOLD_MEMBERSHIP_AMOUNT=5000   # $50.00
 
 # Application environment (development or production)
 FLASK_ENV=production
