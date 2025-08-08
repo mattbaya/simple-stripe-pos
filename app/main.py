@@ -152,7 +152,7 @@ def get_gmail_credentials():
         return None
 
 def send_email(to_email, subject, body, is_html=False):
-    """Send an email using OAuth2 authenticated SMTP"""
+    """Send an email using Gmail API"""
     if not FROM_EMAIL:
         logger.warning("FROM_EMAIL not configured - skipping email send")
         return False
@@ -163,29 +163,34 @@ def send_email(to_email, subject, body, is_html=False):
         return False
     
     try:
-        msg = MIMEMultipart('alternative')
+        from googleapiclient.discovery import build
+        import email.mime.multipart
+        import email.mime.text
+        
+        # Build Gmail service
+        service = build('gmail', 'v1', credentials=credentials)
+        
+        # Create message
+        msg = email.mime.multipart.MIMEMultipart('alternative')
         msg['From'] = FROM_EMAIL
         msg['To'] = to_email
         msg['Subject'] = subject
         
         if is_html:
-            msg.attach(MIMEText(body, 'html'))
+            msg.attach(email.mime.text.MIMEText(body, 'html'))
         else:
-            msg.attach(MIMEText(body, 'plain'))
+            msg.attach(email.mime.text.MIMEText(body, 'plain'))
         
-        # Use OAuth2 for SMTP authentication
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
+        # Encode message
+        raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
         
-        # OAuth2 authentication string
-        auth_string = f"user={FROM_EMAIL}\x01auth=Bearer {credentials.token}\x01\x01"
-        auth_string = base64.b64encode(auth_string.encode()).decode()
+        # Send message
+        message = service.users().messages().send(
+            userId='me', 
+            body={'raw': raw_message}
+        ).execute()
         
-        server.docmd('AUTH', 'XOAUTH2 ' + auth_string)
-        server.send_message(msg)
-        server.quit()
-        
-        logger.info(f"Email sent successfully to {to_email}")
+        logger.info(f"Email sent successfully to {to_email} (Message ID: {message['id']})")
         return True
         
     except Exception as e:

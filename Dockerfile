@@ -15,8 +15,9 @@ COPY app/ ./app/
 COPY templates/ ./templates/
 COPY static/ ./static/
 
-# Create non-root user
+# Create non-root user and logs directory
 RUN adduser --disabled-password --gecos '' appuser
+RUN mkdir -p /app/logs
 RUN chown -R appuser:appuser /app
 USER appuser
 
