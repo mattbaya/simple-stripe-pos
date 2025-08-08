@@ -98,6 +98,26 @@
             display: none;
         }
         
+        .success-checkmark {
+            animation: checkmarkBounce 0.5s ease-in-out;
+        }
+        
+        @keyframes checkmarkBounce {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        #successModal .modal-content {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        
+        #successModal .modal-body {
+            padding: 2rem;
+        }
+        
         .logo-container {
             text-align: center;
             margin-bottom: 30px;
@@ -219,8 +239,8 @@
                             </div>
                             
                             <div class="mb-3">
-                                <label for="payer-email" class="form-label">Email (optional)</label>
-                                <input type="email" class="form-control" id="payer-email">
+                                <label for="payer-email" class="form-label">Email Address <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="payer-email" required>
                             </div>
                             
                             <div id="donation-amount" class="mb-3" style="display: none;">
@@ -276,6 +296,51 @@
                 <!-- Status Messages -->
                 <div id="status-message" style="display: none;"></div>
                 
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body text-center p-4">
+                    <!-- Organization Logo -->
+                    {% if organization_logo %}
+                    <div class="mb-3">
+                        <img src="{{ organization_logo }}" alt="{{ organization_name }}" style="max-width: 120px; height: auto;">
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Success Icon -->
+                    <div class="mb-3">
+                        <div class="success-checkmark">
+                            <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="12" fill="#28a745"/>
+                                <path d="M9 12l2 2 4-4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- Success Message -->
+                    <h3 class="text-success mb-3">Payment Successful!</h3>
+                    <div id="success-details" class="mb-4">
+                        <!-- Payment details will be inserted here -->
+                    </div>
+                    
+                    <p class="text-muted mb-4">
+                        {% if organization_name %}
+                        Thank you for your support of {{ organization_name }}!
+                        {% else %}
+                        Thank you for your payment!
+                        {% endif %}
+                        <br>
+                        <small>A receipt has been sent to your email address.</small>
+                    </p>
+                </div>
+                <div class="modal-footer justify-content-center">
+                    <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal" onclick="resetForm()">Close</button>
                 </div>
             </div>
         </div>
@@ -386,6 +451,19 @@
                 return;
             }
 
+            const payerEmail = document.getElementById('payer-email').value.trim();
+            if (!payerEmail) {
+                showStatus('Please enter your email address', 'error');
+                return;
+            }
+            
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(payerEmail)) {
+                showStatus('Please enter a valid email address', 'error');
+                return;
+            }
+
             // Reader selection handled by admin - payment will use default connected reader
 
             let amount;
@@ -398,7 +476,6 @@
                 amount = Math.round(parseFloat(amountInput) * 100); // Convert to cents
             }
 
-            const payerEmail = document.getElementById('payer-email').value.trim();
             const coverFees = document.getElementById('cover-fees').checked;
 
             showLoading(true);
@@ -472,9 +549,9 @@
                 if (data.status === 'succeeded') {
                     const amount = (data.amount / 100).toFixed(2);
                     const payerName = data.metadata.payer_name;
-                    showStatus(`Payment successful! $${amount} received from ${payerName}`, 'success');
+                    const paymentType = data.metadata.payment_type;
+                    showSuccessModal(amount, payerName, paymentType);
                     showLoading(false);
-                    setTimeout(resetForm, 5000); // Auto-reset after 5 seconds
                 } else if (data.status === 'canceled' || data.status === 'payment_failed') {
                     showStatus('Payment was canceled or failed. Please try again.', 'error');
                     showLoading(false);
@@ -521,6 +598,81 @@
             hideStatus();
             showLoading(false);
         }
+
+        function showSuccessModal(amount, payerName, paymentType) {
+            // Populate success details
+            const successDetails = document.getElementById('success-details');
+            const paymentTypeDisplay = paymentType === 'membership' ? 
+                (selectedMembershipType === 'individual' ? 'Individual Membership' : 'Household Membership') : 
+                'Donation';
+            
+            successDetails.innerHTML = `
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <table class="table table-borderless mb-0">
+                            <tr>
+                                <td class="text-end fw-bold">Amount:</td>
+                                <td class="text-success fw-bold fs-5">$${amount}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end fw-bold">Type:</td>
+                                <td>${paymentTypeDisplay}</td>
+                            </tr>
+                            <tr>
+                                <td class="text-end fw-bold">Name:</td>
+                                <td>${payerName}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            // Show the modal
+            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+        }
+
+        // Load readers when page loads
+        async function loadReaders() {
+            try {
+                const response = await fetch('/discover-readers', {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                const readerList = document.getElementById('reader-list');
+                
+                if (data.readers && data.readers.length > 0) {
+                    let html = '';
+                    data.readers.forEach(reader => {
+                        const statusColor = reader.status === 'online' ? 'text-success' : 'text-warning';
+                        html += `
+                            <div class="reader-item border rounded p-2 mb-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>${reader.label}</strong> (${reader.device_type})
+                                        <br><small class="text-muted">Serial: ...${reader.serial_number}</small>
+                                    </div>
+                                    <div class="${statusColor} fw-bold">${reader.status}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    readerList.innerHTML = html;
+                } else {
+                    readerList.innerHTML = '<div class="text-muted">No readers found. Please use the admin interface to set up readers.</div>';
+                }
+            } catch (error) {
+                console.error('Error loading readers:', error);
+                document.getElementById('reader-list').innerHTML = '<div class="text-warning">Error loading readers. Payment processing will still work.</div>';
+            }
+        }
+
+        // Load readers when page loads
+        document.addEventListener('DOMContentLoaded', loadReaders);
     </script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -3,7 +3,7 @@
     email info@southwilliamstown.org
 }
 
-reader.southwilliamstown.org:8080 {
+reader.southwilliamstown.org {
     # Automatic Let's Encrypt certificate
     
     # Reverse proxy to Flask app (host networking)

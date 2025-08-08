@@ -1,7 +1,7 @@
 # Community POS System - Project Context
 
 ## Overview
-This is a Flask-based point-of-sale system for the South Williamstown Community Association that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. Features optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30) with transparent cost breakdown.
+This is a Flask-based point-of-sale system for the South Williamstown Community Association that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. Features optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30) with transparent cost breakdown. Includes professional success modal with organization branding and automatic email receipt system.
 
 ## Technology Stack
 - **Backend**: Python Flask web application
@@ -41,29 +41,32 @@ The application requires these environment variables:
 - Health check: `curl http://localhost:8080/health`
 
 ## Production Deployment
-- Domain: `reader.southwilliamstown.org:8080`
-- Production runs on ports 8080 (HTTP) and 8443 (HTTPS)
+- Domain: `reader.southwilliamstown.org` (standard ports 80/443)
+- Production runs with Caddy reverse proxy handling SSL
 - Caddy handles SSL certificates automatically via Let's Encrypt
 - Application enforces HTTPS redirects and domain consistency
+- Reader status display automatically loads and shows connected devices
 
 ## Payment Flow
 1. User selects donation or membership (individual/household) on web interface
-2. User enters amount (for donations) and personal details
+2. User enters amount (for donations), name, and **required** email address
 3. User optionally selects fee coverage (shows transparent breakdown)
 4. System creates Stripe PaymentIntent with calculated amount
 5. Payment processed on S700 terminal hardware
-6. Success triggers automatic email receipt and notification
-7. All transaction data stored in Stripe, no local database
+6. Success shows professional modal with organization logo and payment details
+7. Automatic email receipt sent to user and notification to organization
+8. All transaction data stored in Stripe, no local database
 
 ## API Endpoints
-- `GET /` - Main payment interface
+- `GET /` - Main payment interface with automatic reader discovery
+- `GET /admin-readers` - Admin interface for reader management
 - `GET /health` - Health check endpoint
 - `POST /calculate-fees` - Calculate processing fees for given amount/type
 - `POST /create-payment-intent` - Create Stripe PaymentIntent with optional fees
 - `POST /register-reader` - Register new Stripe terminal (development helper)
 - `POST /discover-readers` - Find available Stripe terminals
 - `POST /process-payment` - Process payment on selected terminal
-- `GET /payment-status/<id>` - Check PaymentIntent status and send emails
+- `GET /payment-status/<id>` - Check PaymentIntent status and send emails via Gmail API
 
 ## Fee Coverage Feature
 - Calculates Stripe fees: 2.9% + $0.30 per transaction
@@ -71,6 +74,14 @@ The application requires these environment variables:
 - Transparent breakdown: base amount + processing fee = total
 - Payment metadata tracks fee information for reporting
 - Works for both donations and memberships
+
+## User Interface Features
+- **Professional Success Modal**: Displays organization logo, animated checkmark, and payment details
+- **Required Email Validation**: HTML5 and JavaScript validation ensures email collection for receipts
+- **Automatic Reader Discovery**: Main page automatically loads and displays connected S700 reader status
+- **Responsive Design**: Bootstrap-based interface works on desktop and mobile devices
+- **Real-time Fee Calculation**: Updates total amount as user toggles fee coverage option
+- **Clear Visual Feedback**: Loading spinners, status messages, and error handling
 
 ## Hardware Setup
 - **Card Reader**: Stripe S700 Terminal (SWCA S700 Reader)

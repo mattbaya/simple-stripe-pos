@@ -2,21 +2,23 @@
 
 A lightweight, containerized point-of-sale application for the South Williamstown Community Association to process in-person donations and membership payments using Stripe Terminal hardware.
 
-**Production URL**: https://reader.southwilliamstown.org:8080
+**Production URL**: https://reader.southwilliamstown.org
 
 ## Features
 
-- Simple web interface with donation and membership buttons
+- **Professional web interface** with donation and membership buttons
 - **Two membership tiers**: Individual ($35) and Household ($50)
 - Integration with Stripe S700 terminal for card-present transactions
 - **Optional fee coverage**: Users can choose to cover 2.9% + $0.30 Stripe processing fees
 - Real-time fee calculation with transparent breakdown display
-- Collects payer name and optional email
+- **Required email validation**: Ensures receipt delivery with HTML5 and JavaScript validation
 - Custom donation amounts with dynamic fee calculations
-- **Automatic email receipts** sent to donors using OAuth2-authenticated Gmail
+- **Automatic email receipts** sent to donors using Gmail API with OAuth2
 - **Email notifications** sent to info@southwilliamstown.org
+- **Professional success modal** with organization logo and animated confirmation
+- **Automatic reader discovery**: Displays connected terminal status on page load
 - South Williamstown Community Association branding
-- **SSL/HTTPS**: Automatic certificate management via Caddy
+- **SSL/HTTPS**: Automatic certificate management via Caddy (standard ports 80/443)
 - **Domain enforcement**: Redirects to primary domain reader.southwilliamstown.org
 - No local database required - all data handled by Stripe
 - Containerized with Docker for easy deployment
@@ -183,7 +185,7 @@ docker compose -f docker-compose.prod.yml up -d
 Available at:
 - HTTP: `http://localhost:8080` (redirects to HTTPS)
 - HTTPS: `https://localhost:8443`
-- Production: `https://reader.southwilliamstown.org:8080`
+- Production: `https://reader.southwilliamstown.org` (standard ports 80/443)
 
 **Management:**
 ```bash
@@ -201,29 +203,34 @@ docker compose down
 
 ### For Event Volunteers
 
-1. Open https://reader.southwilliamstown.org:8080 in a browser
-2. Click "Find Readers" to detect the SWCA S700 Reader
-3. Select "SWCA S700 Reader" from the list
-4. For donations:
+1. Open https://reader.southwilliamstown.org in a browser
+2. Page automatically loads and displays "SWCA S700 Reader (stripe_s700) - online" status
+3. For donations:
    - Click "Make a Donation"
-   - Enter payer's name and optional email
+   - Enter payer's name and **required** email address
    - Enter donation amount
-   - Click "Process Payment"
-5. For memberships:
-   - Click "Individual Membership ($35)" or "Household Membership ($50)"
-   - Enter payer's name and optional email
    - Optionally check "Help us cover processing fees" to add Stripe fees
    - Click "Process Payment"
-6. Follow prompts on the Stripe terminal to complete payment
-7. Wait for confirmation message
+4. For memberships:
+   - Click "Individual Membership ($35)" or "Household Membership ($50)"
+   - Enter payer's name and **required** email address
+   - Optionally check "Help us cover processing fees" to add Stripe fees
+   - Click "Process Payment"
+5. Follow prompts on the Stripe terminal to complete payment
+6. Professional success modal appears with:
+   - Organization logo and animated checkmark
+   - Payment details (amount, type, name)
+   - Thank you message
+   - Receipt confirmation note
+7. Click "Close" to dismiss modal and reset form
 
 ### Payment Flow
 
 1. Customer inserts, taps, or swipes card on S700 terminal
 2. Terminal processes payment through Stripe
-3. Success/failure message appears in web interface
-4. Receipt email sent to donor (if email provided and configured)
-5. Notification email sent to organization (if configured)
+3. Professional success modal appears with organization branding
+4. Receipt email automatically sent to donor (email is required)
+5. Notification email automatically sent to organization
 
 ## Management Commands
 
@@ -259,8 +266,9 @@ curl http://localhost:8080/health
 
 **If issues occur:**
 - Ensure S700 is powered on and connected to WiFi
-- Try refreshing the "Find Readers" in the web interface
+- Refresh the page to reload reader status automatically
 - Check Stripe Dashboard → Terminal → Readers for status
+- Use `/admin-readers` page for manual reader management
 
 ### Payment Failures
 
@@ -297,9 +305,10 @@ curl http://localhost:8080/health
 - Refresh tokens don't expire but can be revoked by user
 
 **Receipt Email Issues:**
-- Receipts are only sent if donor provides email address
+- Email address is now required for all transactions
+- Using Gmail API instead of SMTP for reliable delivery ✅
 - Check that `FROM_EMAIL` is configured in `.env`
-- Review logs for specific SMTP error messages
+- Review logs for Gmail API error messages
 
 **Notification Email Issues:**
 - Configure `NOTIFICATION_EMAIL` in `.env` for your organization
