@@ -15,6 +15,9 @@ This is a Flask-based point-of-sale system for the South Williamstown Community 
 ## Key Files
 - `app/main.py` - Main Flask application with payment processing logic
 - `templates/index.html` - Web interface for payment collection
+- `templates/donor_acknowledgment_email.html` - Professional HTML email template for donation receipts
+- `templates/donor_acknowledgment_email_template.html` - Generic template for other organizations
+- `donor-ack.txt` - Source text for donation acknowledgment emails
 - `docker-compose.yml` - Development container orchestration
 - `docker-compose.prod.yml` - Production setup with Caddy SSL proxy
 - `Caddyfile` - Caddy configuration for SSL and reverse proxy
@@ -54,8 +57,9 @@ The application requires these environment variables:
 4. System creates Stripe PaymentIntent with calculated amount
 5. Payment processed on S700 terminal hardware
 6. Success shows professional modal with organization logo and payment details
-7. Automatic email receipt sent to user and notification to organization
-8. All transaction data stored in Stripe, no local database
+7. Automatic HTML email receipt sent to user with embedded letterhead and professional formatting
+8. Organization notification email sent for tracking purposes
+9. All transaction data stored in Stripe, no local database
 
 ## API Endpoints
 - `GET /` - Main payment interface with automatic reader discovery
@@ -96,3 +100,11 @@ The application requires these environment variables:
 - Automatic HTTPS with security headers via Caddy
 - Domain enforcement and HTTPS redirect
 - Application designed for South Williamstown Community Association
+
+## Email Receipt System
+- **Professional HTML Templates**: Uses custom HTML email template with organization letterhead
+- **Embedded Images**: SWCA letterhead image embedded as inline attachment for consistent display
+- **Template Variables**: Dynamic content including donor name, amount, date, and transaction details
+- **Tax Receipt Information**: Includes 501(c)(3) status, Tax ID, and IRS-compliant receipt language
+- **Fallback Support**: Graceful fallback to simple HTML email if template loading fails
+- **Gmail API Integration**: Secure OAuth2-authenticated sending via Gmail API
