@@ -234,7 +234,7 @@
                                     <input class="form-check-input" type="checkbox" id="cover-fees" onchange="updateFeeCalculation()">
                                     <label class="form-check-label" for="cover-fees">
                                         <strong>Help us cover processing fees</strong>
-                                        <small class="text-muted d-block">Cover the 2.9% + $0.30 Stripe processing fee</small>
+                                        <small class="text-muted d-block" id="fee-description">Cover the processing fee</small>
                                     </label>
                                 </div>
                                 <div id="fee-breakdown" class="mt-2 p-2 bg-light rounded" style="display: none;">
@@ -249,14 +249,12 @@
                             <div class="reader-selection">
                                 <label class="form-label">Select Card Reader:</label>
                                 <div id="reader-list">
-                                    <button class="btn btn-outline-secondary" onclick="discoverReaders()">
-                                        Find Readers
-                                    </button>
+                                    <div class="text-muted">No readers connected. Please use the admin interface to set up readers.</div>
                                 </div>
                             </div>
                             
                             <div class="d-grid gap-2">
-                                <button class="btn btn-primary" id="process-payment-btn" onclick="processPayment()" disabled>
+                                <button class="btn btn-primary" id="process-payment-btn" onclick="processPayment()">
                                     Process Payment
                                 </button>
                                 <button class="btn btn-secondary" onclick="resetForm()">
@@ -286,7 +284,6 @@
     <script>
         let selectedPaymentType = null;
         let selectedMembershipType = null;
-        let selectedReader = null;
         let currentPaymentIntent = null;
         let currentFeeData = null;
 
@@ -318,6 +315,8 @@
             
             if (!selectedPaymentType) {
                 feeBreakdown.style.display = 'none';
+                // Reset fee description to default
+                document.getElementById('fee-description').textContent = 'Cover the processing fee';
                 return;
             }
             
@@ -326,6 +325,8 @@
                 const amountInput = document.getElementById('amount').value;
                 if (!amountInput || parseFloat(amountInput) <= 0) {
                     feeBreakdown.style.display = 'none';
+                    // Reset fee description to default
+                    document.getElementById('fee-description').textContent = 'Cover the processing fee';
                     return;
                 }
                 amount = parseFloat(amountInput);
@@ -359,6 +360,10 @@
                 document.getElementById('fee-amount').textContent = data.fee_amount_dollars.toFixed(2);
                 document.getElementById('total-amount').textContent = data.total_with_fees_dollars.toFixed(2);
                 
+                // Update fee description with actual amount
+                const feeDescription = document.getElementById('fee-description');
+                feeDescription.textContent = `Cover the $${data.fee_amount_dollars.toFixed(2)} processing fee`;
+                
                 // Show/hide breakdown based on checkbox
                 if (coverFees) {
                     feeBreakdown.style.display = 'block';
@@ -372,56 +377,7 @@
             }
         }
 
-        async function discoverReaders() {
-            try {
-                const response = await fetch('/discover-readers', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                const data = await response.json();
-                
-                if (data.error) {
-                    showStatus('Error finding readers: ' + data.error, 'error');
-                    return;
-                }
-
-                const readerList = document.getElementById('reader-list');
-                readerList.innerHTML = '';
-
-                if (data.readers.length === 0) {
-                    readerList.innerHTML = '<p class="text-muted">No readers found. Make sure your Stripe Terminal is connected.</p>';
-                    return;
-                }
-
-                data.readers.forEach(reader => {
-                    const button = document.createElement('button');
-                    button.className = 'btn btn-outline-primary me-2 mb-2';
-                    button.textContent = `${reader.label} (${reader.status})`;
-                    button.onclick = () => selectReader(reader.id, reader.label);
-                    readerList.appendChild(button);
-                });
-
-            } catch (error) {
-                showStatus('Error discovering readers: ' + error.message, 'error');
-            }
-        }
-
-        function selectReader(readerId, readerLabel) {
-            selectedReader = readerId;
-            
-            // Update UI to show selected reader
-            const buttons = document.querySelectorAll('#reader-list button');
-            buttons.forEach(btn => btn.classList.remove('btn-primary'));
-            buttons.forEach(btn => btn.classList.add('btn-outline-primary'));
-            
-            event.target.classList.remove('btn-outline-primary');
-            event.target.classList.add('btn-primary');
-            
-            document.getElementById('process-payment-btn').disabled = false;
-        }
+        // Reader functions removed - now handled in admin interface
 
         async function processPayment() {
             const payerName = document.getElementById('payer-name').value.trim();
@@ -430,10 +386,7 @@
                 return;
             }
 
-            if (!selectedReader) {
-                showStatus('Please select a card reader', 'error');
-                return;
-            }
+            // Reader selection handled by admin - payment will use default connected reader
 
             let amount;
             if (selectedPaymentType === 'donation') {
@@ -484,8 +437,7 @@
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        payment_intent_id: intentData.id,
-                        reader_id: selectedReader
+                        payment_intent_id: intentData.id
                     })
                 });
 
@@ -556,7 +508,6 @@
         function resetForm() {
             selectedPaymentType = null;
             selectedMembershipType = null;
-            selectedReader = null;
             currentPaymentIntent = null;
             currentFeeData = null;
             
@@ -566,8 +517,6 @@
             document.getElementById('amount').value = '';
             document.getElementById('cover-fees').checked = false;
             document.getElementById('fee-breakdown').style.display = 'none';
-            document.getElementById('process-payment-btn').disabled = true;
-            document.getElementById('reader-list').innerHTML = '<button class="btn btn-outline-secondary" onclick="discoverReaders()">Find Readers</button>';
             
             hideStatus();
             showLoading(false);
