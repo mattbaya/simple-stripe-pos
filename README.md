@@ -1,8 +1,8 @@
-# South Williamstown Community Association - POS System
+# Community POS System (Docker Version)
 
-A lightweight, containerized point-of-sale application for the South Williamstown Community Association to process in-person donations and membership payments using Stripe Terminal hardware.
+A lightweight, containerized point-of-sale application for community organizations to process in-person donations and membership payments using Stripe Terminal hardware.
 
-**Production URL**: https://reader.southwilliamstown.org
+**🚀 Alternative Deployment:** For minimal-cost deployment suitable for occasional use, see the [Railway version](https://github.com/mattbaya/simple-stripe-pos-railway) which costs ~$3/year for sporadic events.
 
 ## Features
 
@@ -15,12 +15,12 @@ A lightweight, containerized point-of-sale application for the South Williamstow
 - Custom donation amounts with dynamic fee calculations
 - **Professional HTML email receipts** sent to donors with embedded letterhead using Gmail API with OAuth2
 - **Tax-compliant receipt format** with 501(c)(3) information and proper documentation
-- **Email notifications** sent to info@southwilliamstown.org
+- **Email notifications** sent to your configured organization email
 - **Professional success modal** with organization logo and animated confirmation
 - **Automatic reader discovery**: Displays connected terminal status on page load
-- South Williamstown Community Association branding
+- Customizable organization branding
 - **SSL/HTTPS**: Automatic certificate management via Caddy (standard ports 80/443)
-- **Domain enforcement**: Redirects to primary domain reader.southwilliamstown.org
+- **Domain enforcement**: Configurable primary domain
 - No local database required - all data handled by Stripe
 - Containerized with Docker for easy deployment
 
