@@ -1,12 +1,20 @@
-# Community POS System (Docker Version)
+# Community POS System (Railway Version)
 
-A lightweight, containerized point-of-sale application for community organizations to process in-person donations and membership payments using Stripe Terminal hardware.
+A lightweight point-of-sale application for community organizations to process in-person donations and membership payments using Stripe Terminal hardware. **Optimized for Railway deployment with ~$3/year operating costs for sporadic use.**
 
-**🚀 Alternative Deployment:** For minimal-cost deployment suitable for occasional use, see the [Railway version](https://github.com/mattbaya/simple-stripe-pos-railway) which costs ~$3/year for sporadic events.
+**🐳 Docker Version:** For full-featured Docker deployment with SSL/domain management, see the parent directory.
+
+## Cost-Effective Deployment
+
+Perfect for organizations that use their POS system **several times per year**:
+- **Railway.app**: Pay only when running (~$0.10/hour)
+- **Annual cost**: ~$3/year for 28 hours of usage (7 events × 4 hours each)
+- **Auto-sleep**: Automatically stops when inactive to minimize costs
+- **Instant activation**: Scale up 30 minutes before your event
 
 ## Features
 
-- **Professional web interface** with donation and membership buttons
+- **Professional web interface** with donation and membership buttons  
 - **Two membership tiers**: Individual ($35) and Household ($50)
 - Integration with Stripe S700 terminal for card-present transactions
 - **Optional fee coverage**: Users can choose to cover 2.9% + $0.30 Stripe processing fees
@@ -19,443 +27,198 @@ A lightweight, containerized point-of-sale application for community organizatio
 - **Professional success modal** with organization logo and animated confirmation
 - **Automatic reader discovery**: Displays connected terminal status on page load
 - Customizable organization branding
-- **SSL/HTTPS**: Automatic certificate management via Caddy (standard ports 80/443)
-- **Domain enforcement**: Configurable primary domain
+- **Automatic HTTPS**: SSL certificates handled by Railway
 - No local database required - all data handled by Stripe
-- Containerized with Docker for easy deployment
 
-## Requirements Checklist
+## Quick Railway Deployment
 
-To deploy this POS system for your organization, you'll need to provide the following:
+### 1. Fork this Repository
+1. Click "Fork" on this GitHub repo
+2. This gives you your own copy to deploy
 
-### 1. Technical Infrastructure
-- [ ] **Docker & Docker Compose**: Installed on server
-- [ ] **Domain name**: For production deployment (e.g., reader.yourdomain.org)
-- [ ] **SSL certificate**: Automatic via Let's Encrypt/Caddy
+### 2. Connect to Railway
+1. Go to [railway.app](https://railway.app) and sign up
+2. Click "New Project" → "Deploy from GitHub repo"
+3. Select your forked repository
+4. Railway automatically detects Flask and deploys
 
-### 2. Payment Processing (Stripe)
-- [ ] **Stripe Account**: Live account with Terminal capability
-- [ ] **Stripe API Keys**: Secret and Publishable keys
-- [ ] **Stripe Terminal Location**: Physical location ID from Stripe
-- [ ] **Stripe S700 Terminal**: Hardware card reader
-- [ ] **Terminal Registration**: Reader registered to your Stripe location
-
-### 3. Email System (Gmail API)
-- [ ] **Google Cloud Project**: With Gmail API enabled
-- [ ] **OAuth2 Credentials**: Client ID and Client Secret
-- [ ] **OAuth2 Refresh Token**: Generated via setup script
-- [ ] **Gmail Account**: For sending receipts and notifications
-- [ ] **Sender Email Address**: For receipt "From" field
-- [ ] **Notification Email Address**: Where payment alerts are sent
-
-### 4. Organization Branding & Content
-- [ ] **Organization Name**: Full legal name
-- [ ] **Organization Website**: URL for receipts and branding
-- [ ] **Logo Image**: For web interface (PNG/JPG, ~150x150px)
-- [ ] **Letterhead Image**: For email receipts (PNG/JPG, landscape format)
-- [ ] **501(c)(3) Tax ID**: For tax-compliant receipts (if applicable)
-- [ ] **Donation Acknowledgment Text**: Custom message for donors
-- [ ] **Contact Email**: For donor questions and support
-
-### 5. Financial Configuration
-- [ ] **Membership Amounts**: Individual and household prices (in cents)
-- [ ] **Fee Coverage Policy**: Whether to offer Stripe fee coverage option
-- [ ] **Payment Processing Terms**: Legal compliance and policies
-
-### 6. Generic Example Assets (Provided)
-
-For organizations getting started, we provide generic examples:
-- [x] **Example Logo**: `static/example-logo.svg` (convert to PNG)
-- [x] **Example Letterhead**: `templates/example-letterhead.svg` (convert to PNG)  
-- [x] **Generic Email Template**: `templates/donor_acknowledgment_email_template.html`
-- [x] **Graphics Setup Guide**: `GRAPHICS_SETUP.md` with detailed instructions
-- [x] **Sample Donor Text**: Based on standard 501(c)(3) language
-
-## Prerequisites (SWCA-Specific)
-
-1. **Stripe Account**: Live account with Terminal enabled ✅
-2. **Stripe S700 Terminal**: SWCA S700 Reader (tmr_GJIc8gfqlW1SF1) - Online ✅
-3. **Docker & Docker Compose**: Installed on server ✅
-4. **Domain**: reader.southwilliamstown.org configured ✅
-
-## Stripe Setup
-
-### 1. Get API Keys
-
-1. Log in to your [Stripe Dashboard](https://dashboard.stripe.com/)
-2. Go to Developers → API keys
-3. Copy your **Publishable key** and **Secret key**
-4. Make sure you're using the correct keys for your environment (test vs live)
-
-### 2. Create a Location
-
-1. In the Stripe Dashboard, go to Terminal → Locations
-2. Click "Create location"
-3. Enter your address and business details
-4. Copy the **Location ID** (starts with `tml_`)
-
-### 3. Register Your S700 Terminal
-
-1. Power on your Stripe S700 terminal
-2. In the Stripe Dashboard, go to Terminal → Readers
-3. Click "Register reader"
-4. Follow the on-screen instructions to connect your S700 to WiFi
-5. The terminal will display a registration code
-6. Enter the code in the Stripe Dashboard
-7. Assign the reader to the location you created
-8. Give the reader a memorable label (e.g., "Donation Table Reader")
-
-### 4. Test the Terminal
-
-1. Use Stripe's test mode first to ensure everything works
-2. Test with Stripe's test cards (available in their documentation)
-3. Switch to live mode only when ready for actual payments
-
-### 5. Email Setup with OAuth2 (Optional)
-
-The system can automatically send receipt emails to donors and notification emails to your organization using Google OAuth2 authentication.
-
-#### Step 1: Google Cloud Console Setup
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create a new project or select existing project
-3. Enable the **Gmail API**:
-   - Go to APIs & Services → Library
-   - Search for "Gmail API" and enable it
-4. Create OAuth2 credentials:
-   - Go to APIs & Services → Credentials
-   - Click "Create Credentials" → "OAuth 2.0 Client IDs"
-   - Application type: "Desktop application"
-   - Name: "SWCA POS System"
-   - Add `http://localhost` to authorized redirect URIs
-   - Save the Client ID and Client Secret
-
-#### Step 2: Generate Refresh Token
-Since you have your Client ID and Secret, you need to generate a refresh token:
-
-1. **Install dependencies** (on your local machine):
-   ```bash
-   pip install google-auth-oauthlib
-   ```
-
-2. **Run the token generator script**:
-   ```bash
-   cd /home/swca/pos-docker
-   python3 generate_oauth_token.py
-   ```
-
-3. **Follow the prompts**:
-   - Enter your Client ID and Secret
-   - Browser will open for Google authorization
-   - Sign in and grant Gmail send permissions
-   - Script will display your refresh token
-
-#### Step 3: Configure Environment
-Add the OAuth2 values to your `.env` file:
-```env
-GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_REFRESH_TOKEN=your_refresh_token
-FROM_EMAIL=your_email@domain.com
-```
-
-**Email Configuration Notes:**
-- OAuth2 is configured and working ✅
-- Gmail API credentials are properly set up
-- Transaction notifications are sent to info@southwilliamstown.org
-- Receipts are sent to donors who provide email addresses
-- OAuth2 refresh tokens don't expire unless revoked
-
-## Installation & Configuration
-
-### 1. Clone/Copy Files
-
-Ensure all files are in `/home/swca/pos-docker/`:
+### 3. Configure Environment Variables
+In Railway dashboard, add these variables:
 
 ```
-pos-docker/
-├── app/
-│   └── main.py
-├── templates/
-│   └── index.html
-├── static/
-│   └── logo.png          # Your organization logo
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
-├── env-template           # Template for .env file
-├── .env                  # Your configuration (create from template)
-└── README.md
-```
+# Stripe Configuration
+STRIPE_SECRET_KEY=sk_live_your_secret_key
+STRIPE_LOCATION_ID=tml_your_location_id
 
-### 2. Environment Configuration
+# Organization Settings
+ORGANIZATION_NAME=Your Community Organization
+ORGANIZATION_WEBSITE=https://yourwebsite.org
+FROM_EMAIL=contact@yourdomain.org
+NOTIFICATION_EMAIL=notifications@yourdomain.org
 
-The `.env` file is already configured with:
-
-```env
-# Stripe Configuration (Live Keys)
-STRIPE_SECRET_KEY=sk_live_... # ✅ Configured
-STRIPE_PUBLISHABLE_KEY=pk_live_... # ✅ Configured
-STRIPE_LOCATION_ID=tml_GJFbNglXXR3JXh # ✅ Configured
-
-# Membership amounts in cents
+# Membership Pricing (in cents)
 INDIVIDUAL_MEMBERSHIP_AMOUNT=3500  # $35.00
 HOUSEHOLD_MEMBERSHIP_AMOUNT=5000   # $50.00
 
-# Organization Configuration
-ORGANIZATION_NAME="South Williamstown Community Association"
-ORGANIZATION_WEBSITE=https://southwilliamstown.org
-DOMAIN_NAME=reader.southwilliamstown.org
-
-# Email Configuration (OAuth2)
-FROM_EMAIL=info@southwilliamstown.org
-NOTIFICATION_EMAIL=info@southwilliamstown.org
-GOOGLE_CLIENT_ID=... # ✅ Configured
-GOOGLE_CLIENT_SECRET=... # ✅ Configured  
-GOOGLE_REFRESH_TOKEN=... # ✅ Configured
+# Gmail OAuth2 (see setup guide below)
+GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_client_secret
+GOOGLE_REFRESH_TOKEN=your_refresh_token
 ```
 
-⚠️ **Security**: Never commit the `.env` file to version control. Keep your API keys secure.
+### 4. Set Custom Domain (Optional)
+- In Railway settings, add your custom domain (e.g., pos.yourdomain.org)
+- Or use the provided Railway URL
 
-### 3. Start the Application
+### 5. Configure Auto-Sleep
+- **Default**: Railway automatically sleeps after inactivity
+- **Manual Control**: Use Railway dashboard to start/stop as needed
+- **Cost**: $0/month when sleeping, ~$0.10/hour when active
 
-From the `/home/swca/pos-docker/` directory:
+## Pre-Event Checklist
 
-**Development:**
+**30 minutes before your event:**
+1. Open Railway dashboard
+2. Ensure app is running (wake from sleep if needed)
+3. Test payment flow with a small amount
+4. Confirm Stripe terminal is online
+5. Share payment URL with volunteers
+
+**After your event:**
+1. App automatically sleeps after ~30 minutes of inactivity
+2. Check Railway dashboard to confirm it's sleeping
+3. Review payments in Stripe dashboard
+
+## Stripe Terminal Setup
+
+### 1. Get API Keys
+1. Log in to [Stripe Dashboard](https://dashboard.stripe.com/)
+2. Go to Developers → API keys
+3. Copy your **Secret key**
+4. Switch to live mode for real payments
+
+### 2. Create Location & Register Terminal
+1. Terminal → Locations → Create location
+2. Terminal → Readers → Register reader
+3. Connect S700 to WiFi and enter registration code
+4. Copy Location ID (starts with `tml_`)
+
+### 3. Test Connection
+1. Deploy to Railway with test keys first
+2. Verify terminal shows as "online" in your app
+3. Process a test payment
+4. Switch to live keys when ready
+
+## Gmail Email Setup
+
+The system sends professional HTML receipts and notifications via Gmail API:
+
+### 1. Google Cloud Setup
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create project and enable Gmail API
+3. Create OAuth2 credentials (Desktop application type)
+4. Add `http://localhost` to redirect URIs
+
+### 2. Generate Refresh Token
 ```bash
-docker compose up -d
-```
-Available at: `http://localhost:8080`
+# Install on your local machine
+pip install google-auth-oauthlib
 
-**Production:**
-```bash
-docker compose -f docker-compose.prod.yml up -d
-```
-Available at:
-- HTTP: `http://localhost:8080` (redirects to HTTPS)
-- HTTPS: `https://localhost:8443`
-- Production: `https://reader.southwilliamstown.org` (standard ports 80/443)
-
-**Management:**
-```bash
-# Check status
-docker compose ps
-
-# View logs
-docker compose logs -f
-
-# Stop
-docker compose down
+# Run the OAuth flow
+python3 generate_oauth_token.py
 ```
 
-## Usage
+### 3. Add to Railway Environment
+Add the generated values to Railway environment variables.
 
-### For Event Volunteers
+## Cost Management
 
-1. Open https://reader.southwilliamstown.org in a browser
-2. Page automatically loads and displays "SWCA S700 Reader (stripe_s700) - online" status
-3. For donations:
-   - Click "Make a Donation"
-   - Enter payer's name and **required** email address
-   - Enter donation amount
-   - Optionally check "Help us cover processing fees" to add Stripe fees
-   - Click "Process Payment"
-4. For memberships:
-   - Click "Individual Membership ($35)" or "Household Membership ($50)"
-   - Enter payer's name and **required** email address
-   - Optionally check "Help us cover processing fees" to add Stripe fees
-   - Click "Process Payment"
-5. Follow prompts on the Stripe terminal to complete payment
-6. Professional success modal appears with:
-   - Organization logo and animated checkmark
-   - Payment details (amount, type, name)
-   - Thank you message
-   - Receipt confirmation note
-7. Click "Close" to dismiss modal and reset form
+### Usage Monitoring
+- **Railway Dashboard**: Shows exact usage hours and costs
+- **Billing**: Monthly billing with per-minute precision
+- **Estimates**: ~$0.10-0.20/hour depending on usage
 
-### Payment Flow
+### Cost Examples
+| Usage Pattern | Annual Cost |
+|--------------|-------------|
+| 4 events/year, 4 hours each | ~$2-4/year |
+| 12 events/year, 2 hours each | ~$3-6/year |
+| Always-on development | ~$15-30/month |
 
-1. Customer inserts, taps, or swipes card on S700 terminal
-2. Terminal processes payment through Stripe
-3. Professional success modal appears with organization branding
-4. **Professional HTML receipt email** automatically sent to donor with:
-   - Embedded SWCA letterhead image
-   - Tax-compliant 501(c)(3) receipt information
-   - Transaction details and professional formatting
-   - Consistent organization branding
-5. Notification email automatically sent to organization
-
-## Management Commands
-
-```bash
-# Start the application
-docker compose up -d
-
-# Stop the application
-docker compose down
-
-# View real-time logs
-docker compose logs -f
-
-# Restart after configuration changes
-docker compose down && docker compose up -d
-
-# Update the application
-docker compose build --no-cache
-docker compose up -d
-
-# Check application health
-curl http://localhost:8080/health
-```
-
-## Troubleshooting
-
-### Terminal Not Found
-
-**Current Setup:**
-- Reader: SWCA S700 Reader (tmr_GJIc8gfqlW1SF1)
-- Status: Online ✅
-- Location: tml_GJFbNglXXR3JXh ✅
-
-**If issues occur:**
-- Ensure S700 is powered on and connected to WiFi
-- Refresh the page to reload reader status automatically
-- Check Stripe Dashboard → Terminal → Readers for status
-- Use `/admin-readers` page for manual reader management
-
-### Payment Failures
-
-- Check Stripe Dashboard → Payments for error details
-- Ensure API keys are correct and for the right environment (test/live)
-- Verify terminal has good internet connectivity
-- Check application logs: `docker compose logs -f`
-
-### Application Won't Start
-
-- Check environment variables in `.env` file
-- Verify Docker and Docker Compose are installed
-- Check port 8080 isn't already in use: `ss -tlnp | grep 8080`
-- Review logs for specific error messages
-
-### Connection Issues
-
-- Ensure firewall allows traffic on port 8080
-- For external access, you may need to configure your router/firewall
-- Check if other services are using the same port
-
-### Email Issues
-
-**Emails Not Sending:**
-- Check application logs: `docker compose logs -f`
-- Verify SMTP credentials in `.env` file
-- Ensure email account has app password generated (for Gmail)
-- Test SMTP settings with a simple email client first
-
-**OAuth2-Specific Issues:**
-- Make sure Gmail API is enabled in Google Cloud Console
-- Verify redirect URI `http://localhost` is added to OAuth2 credentials
-- Check that refresh token was generated correctly
-- Refresh tokens don't expire but can be revoked by user
-
-**Receipt Email Issues:**
-- Email address is now required for all transactions
-- Using Gmail API instead of SMTP for reliable delivery ✅
-- Check that `FROM_EMAIL` is configured in `.env`
-- Review logs for Gmail API error messages
-
-**Notification Email Issues:**
-- Configure `NOTIFICATION_EMAIL` in `.env` for your organization
-- Ensure the SMTP account has permission to send to this address
-- Ensure the SMTP account has permission to send to external addresses
-
-## Security Considerations
-
-- Stripe live API keys are properly configured ✅
-- Production environment with live payments ✅
-- HTTPS enabled with automatic SSL certificates via Caddy ✅
-- Security headers and domain enforcement ✅
-- OAuth2 authentication for email services ✅
-- Environment files (.env) are gitignored ✅
-- Regular dependency updates recommended
-
-## Customization
-
-### Changing Default Amounts
-
-Edit membership amounts in `.env` file (amounts in cents):
-```env
-INDIVIDUAL_MEMBERSHIP_AMOUNT=4000  # $40.00
-HOUSEHOLD_MEMBERSHIP_AMOUNT=6000   # $60.00
-```
-
-### Fee Coverage Feature
-
-The application automatically calculates Stripe processing fees (2.9% + $0.30 per transaction) and allows users to optionally cover these fees. When enabled:
-
-- Users see a transparent breakdown: base amount, fee amount, and total
-- Fee calculation updates dynamically as donation amounts change
-- All payment metadata includes fee information for reporting
-- Receipts clearly indicate when fees were covered
-
-Examples:
-- $20 donation + fees = $20.88 total (covers $0.88 in processing fees)
-- $35 individual membership + fees = $36.32 total (covers $1.32 in processing fees)
-- $50 household membership + fees = $51.75 total (covers $1.75 in processing fees)
-
-### Modifying the Interface
-
-- Edit `templates/index.html` to change the UI
-- Add custom CSS in the `<style>` section
-- Modify button text, colors, or layout as needed
-
-### Adding Features
-
-The Flask application (`app/main.py`) can be extended with:
-- Email receipts
-- Payment reporting
-- Custom donation amounts/tiers
-- Member information collection
-- Integration with other systems
-
-### Environment-Specific Settings
-
-For different environments (development/production):
-
-```env
-# Development
-FLASK_ENV=development
-STRIPE_SECRET_KEY=sk_test_...
-
-# Production  
-FLASK_ENV=production
-STRIPE_SECRET_KEY=sk_live_...
-```
+### Optimization Tips
+1. **Sleep when not needed**: Railway auto-sleeps after 30 min
+2. **Manual control**: Stop service between events
+3. **Monitor usage**: Check Railway dashboard monthly
+4. **Development**: Use local Docker for development to save Railway costs
 
 ## File Structure
-
 ```
-pos-docker/
+simple-stripe-pos-railway/
 ├── app/
-│   └── main.py              # Flask application
+│   └── main.py              # Flask application  
 ├── templates/
 │   ├── index.html           # Web interface
-│   ├── donor_acknowledgment_email.html # Professional HTML email template
-│   └── donor_acknowledgment_email_template.html # Generic template for other orgs
-├── static/                  # Static assets (currently empty)
-├── docker-compose.yml       # Docker Compose configuration
-├── Dockerfile              # Container image definition
-├── requirements.txt        # Python dependencies
-├── .env                    # Environment variables (create this)
-├── donor-ack.txt           # Source text for donation acknowledgment
+│   └── *.html               # Email templates
+├── static/                  # Organization assets
+├── requirements.txt         # Python dependencies
+├── railway.json             # Railway deployment config
+├── generate_oauth_token.py  # OAuth2 setup utility
 └── README.md               # This file
 ```
 
-## Support
+## Management Commands
 
-For issues with:
-- **Stripe integration**: Check [Stripe Terminal documentation](https://stripe.com/docs/terminal)
-- **Application bugs**: Check logs with `docker compose logs -f`
-- **Docker issues**: Ensure Docker and Docker Compose are properly installed
+### Local Development
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-## License
+# Set environment variables
+export STRIPE_SECRET_KEY=sk_test_...
+export STRIPE_LOCATION_ID=tml_...
+# ... other variables
 
-This is a simple utility application. Modify and use as needed for your community organization.
+# Run locally
+python app/main.py
+```
+
+### Railway Management
+- **Dashboard**: Monitor usage, logs, and costs
+- **CLI**: `railway login` and `railway logs` for advanced management
+- **Scaling**: Manually start/stop services as needed
+
+## Troubleshooting
+
+### Payment Issues
+1. Check Stripe dashboard for detailed error messages
+2. Verify terminal is online and connected to WiFi  
+3. Ensure you're using live (not test) API keys for real payments
+4. Check Railway logs in dashboard
+
+### Email Issues
+1. Verify Gmail API is enabled in Google Cloud Console
+2. Check OAuth2 credentials and refresh token
+3. Test email sending with a small transaction first
+4. Review Railway application logs
+
+### Railway-Specific Issues
+1. **App won't start**: Check environment variables are set correctly
+2. **Timeouts**: Railway has request timeout limits for idle connections
+3. **Domain issues**: DNS propagation can take 24-48 hours
+4. **Costs higher than expected**: Check if app is sleeping properly
+
+## Security Notes
+- Never commit API keys to git
+- Use Railway's built-in environment variable encryption
+- Enable 2FA on Stripe and Google Cloud accounts  
+- Regularly rotate API keys and refresh tokens
+- Railway provides HTTPS automatically
+
+## Support Resources
+- **Stripe**: [Terminal Documentation](https://stripe.com/docs/terminal)
+- **Railway**: [Documentation](https://docs.railway.app)
+- **Gmail API**: [Python Quickstart](https://developers.google.com/gmail/api/quickstart/python)
+
+---
+
+**Perfect for**: Community organizations, nonprofits, and small businesses that need occasional payment processing with minimal ongoing costs.
