@@ -21,6 +21,11 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__, template_folder='../templates', static_folder='../static')
 
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+# Verify Stripe key is loaded
+if not stripe.api_key:
+    logger.error("STRIPE_SECRET_KEY environment variable not found!")
+else:
+    logger.info("Stripe API key loaded successfully")
 STRIPE_LOCATION_ID = os.getenv('STRIPE_LOCATION_ID')
 # Membership amounts in cents
 INDIVIDUAL_MEMBERSHIP_AMOUNT = int(os.getenv('INDIVIDUAL_MEMBERSHIP_AMOUNT', '3500'))  # $35 in cents
@@ -387,6 +392,17 @@ def create_connection_token():
 def health():
     return jsonify({'status': 'healthy'})
 
+@app.route('/debug-env')
+def debug_env():
+    """Debug endpoint to check environment variables"""
+    env_info = {
+        'stripe_key_present': bool(os.getenv('STRIPE_SECRET_KEY')),
+        'stripe_key_prefix': os.getenv('STRIPE_SECRET_KEY', 'MISSING')[:7] if os.getenv('STRIPE_SECRET_KEY') else 'MISSING',
+        'location_id': os.getenv('STRIPE_LOCATION_ID', 'MISSING'),
+        'all_env_keys': [k for k in os.environ.keys() if 'STRIPE' in k]
+    }
+    return jsonify(env_info)
+
 @app.route('/calculate-fees', methods=['POST'])
 def calculate_fees():
     try:
@@ -394,6 +410,7 @@ def calculate_fees():
         amount = data.get('amount')
         payment_type = data.get('payment_type')
         membership_type = data.get('membership_type')
+        renewal_donation = data.get('renewal_donation', 0)
         
         # Determine base amount
         if payment_type == 'membership':
@@ -403,6 +420,11 @@ def calculate_fees():
                 base_amount = HOUSEHOLD_MEMBERSHIP_AMOUNT
             else:
                 return jsonify({'error': 'Invalid membership type'}), 400
+            
+            # Add renewal donation if provided (renewal_donation is in dollars)
+            if renewal_donation and renewal_donation > 0:
+                base_amount += int(renewal_donation * 100)  # Convert to cents
+                
         elif payment_type == 'donation':
             if not amount or amount <= 0:
                 return jsonify({'error': 'Invalid donation amount'}), 400
@@ -433,6 +455,7 @@ def create_payment_intent():
         payment_type = data.get('payment_type')
         membership_type = data.get('membership_type')
         amount = data.get('amount')
+        renewal_donation = data.get('renewal_donation', 0)
         payer_name = data.get('payer_name', '')
         payer_email = data.get('payer_email', '')
         cover_fees = data.get('cover_fees', False)
@@ -447,6 +470,12 @@ def create_payment_intent():
                 description = f"Household membership payment from {payer_name}"
             else:
                 return jsonify({'error': 'Invalid membership type'}), 400
+            
+            # Add renewal donation if provided
+            if renewal_donation and renewal_donation > 0:
+                base_amount += renewal_donation
+                description += f" with additional ${renewal_donation/100:.2f} donation"
+                
         else:
             base_amount = amount
             description = f"Donation from {payer_name}"
@@ -465,6 +494,9 @@ def create_payment_intent():
             'base_amount': str(base_amount),
             'cover_fees': str(cover_fees)
         }
+        
+        if renewal_donation and renewal_donation > 0:
+            metadata['renewal_donation'] = str(renewal_donation)
         
         if cover_fees:
             metadata['fee_amount'] = str(calculate_fee_amount(base_amount))
@@ -676,5 +708,5 @@ if __name__ == '__main__':
         logger.error(f"Missing required environment variables: {', '.join(missing_vars)}")
         exit(1)
     
-    logger.info("Starting POS application")
+    logger.info("Starting POS application - Railway deployment")
     app.run(host='0.0.0.0', port=5000, debug=False)

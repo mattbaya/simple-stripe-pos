@@ -248,6 +248,21 @@
                                 <input type="number" class="form-control" id="amount" min="1" step="0.01" placeholder="20.00" onchange="updateFeeCalculation()">
                             </div>
                             
+                            <!-- Renewal Donation Option (for membership payments) -->
+                            <div id="renewal-donation-section" class="mb-3" style="display: none;">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="include-donation" onchange="toggleRenewalDonation()">
+                                    <label class="form-check-label" for="include-donation">
+                                        <strong>Include additional donation</strong>
+                                        <small class="text-muted d-block">Add a donation to your membership payment</small>
+                                    </label>
+                                </div>
+                                <div id="renewal-donation-amount" class="mt-3" style="display: none;">
+                                    <label for="donation-amount-input" class="form-label">Additional Donation Amount ($)</label>
+                                    <input type="number" class="form-control" id="donation-amount-input" min="1" step="0.01" placeholder="25.00" onchange="updateFeeCalculation()">
+                                </div>
+                            </div>
+                            
                             <!-- Fee Coverage Option -->
                             <div class="mb-3">
                                 <div class="form-check">
@@ -261,16 +276,16 @@
                                     <div style="font-size: 28px; line-height: 2.2; font-weight: bold;">
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <span>Base amount:</span>
-                                            <span class="text-primary" style="font-size: 32px;">$<span id="base-amount">0.00</span></span>
+                                            <span class="text-primary" style="font-size: 28px;">$<span id="base-amount">0.00</span></span>
                                         </div>
                                         <div class="d-flex justify-content-between align-items-center mb-3">
                                             <span>Processing fee:</span>
-                                            <span class="text-warning" style="font-size: 32px;">$<span id="fee-amount">0.00</span></span>
+                                            <span class="text-warning" style="font-size: 28px;">$<span id="fee-amount">0.00</span></span>
                                         </div>
                                         <hr class="my-3" style="border-top: 4px solid #6c757d;">
                                         <div class="d-flex justify-content-between align-items-center">
-                                            <span style="font-size: 32px;">Total:</span>
-                                            <span class="text-success" style="font-size: 40px; font-weight: 900;">$<span id="total-amount">0.00</span></span>
+                                            <span style="font-size: 28px;">Total:</span>
+                                            <span class="text-success" style="font-size: 28px; font-weight: 900;">$<span id="total-amount">0.00</span></span>
                                         </div>
                                     </div>
                                 </div>
@@ -370,6 +385,7 @@
             if (type === 'donation') {
                 document.getElementById('payment-title').textContent = 'Make a Donation';
                 document.getElementById('donation-amount').style.display = 'block';
+                document.getElementById('renewal-donation-section').style.display = 'none';
             } else if (type === 'membership') {
                 if (membershipType === 'individual') {
                     document.getElementById('payment-title').textContent = 'Individual Membership Payment ($35)';
@@ -377,11 +393,26 @@
                     document.getElementById('payment-title').textContent = 'Household Membership Payment ($50)';
                 }
                 document.getElementById('donation-amount').style.display = 'none';
+                document.getElementById('renewal-donation-section').style.display = 'block';
                 // Calculate fees for membership immediately
                 updateFeeCalculation();
             }
             
             hideStatus();
+        }
+
+        function toggleRenewalDonation() {
+            const includeDonation = document.getElementById('include-donation').checked;
+            const donationAmount = document.getElementById('renewal-donation-amount');
+            
+            if (includeDonation) {
+                donationAmount.style.display = 'block';
+            } else {
+                donationAmount.style.display = 'none';
+                document.getElementById('donation-amount-input').value = '';
+            }
+            
+            updateFeeCalculation();
         }
 
         async function updateFeeCalculation() {
@@ -396,6 +427,8 @@
             }
             
             let amount = null;
+            let renewalDonation = 0;
+            
             if (selectedPaymentType === 'donation') {
                 const amountInput = document.getElementById('amount').value;
                 if (!amountInput || parseFloat(amountInput) <= 0) {
@@ -405,6 +438,15 @@
                     return;
                 }
                 amount = parseFloat(amountInput);
+            } else if (selectedPaymentType === 'membership') {
+                // Check for additional donation
+                const includeDonation = document.getElementById('include-donation').checked;
+                if (includeDonation) {
+                    const donationAmountInput = document.getElementById('donation-amount-input').value;
+                    if (donationAmountInput && parseFloat(donationAmountInput) > 0) {
+                        renewalDonation = parseFloat(donationAmountInput);
+                    }
+                }
             }
             
             try {
@@ -416,7 +458,8 @@
                     body: JSON.stringify({
                         payment_type: selectedPaymentType,
                         membership_type: selectedMembershipType,
-                        amount: amount
+                        amount: amount,
+                        renewal_donation: renewalDonation
                     })
                 });
                 
@@ -439,8 +482,12 @@
                 const feeDescription = document.getElementById('fee-description');
                 feeDescription.textContent = `Cover the $${data.fee_amount_dollars.toFixed(2)} processing fee`;
                 
-                // Always show breakdown when we have valid fee data
-                feeBreakdown.style.display = 'block';
+                // Only show breakdown when checkbox is checked AND we have valid fee data
+                if (coverFees) {
+                    feeBreakdown.style.display = 'block';
+                } else {
+                    feeBreakdown.style.display = 'none';
+                }
                 
             } catch (error) {
                 console.error('Error calculating fees:', error);
@@ -473,6 +520,8 @@
             // Reader selection handled by admin - payment will use default connected reader
 
             let amount;
+            let renewalDonation = 0;
+            
             if (selectedPaymentType === 'donation') {
                 const amountInput = document.getElementById('amount').value;
                 if (!amountInput || parseFloat(amountInput) <= 0) {
@@ -480,6 +529,15 @@
                     return;
                 }
                 amount = Math.round(parseFloat(amountInput) * 100); // Convert to cents
+            } else if (selectedPaymentType === 'membership') {
+                // Check for additional donation
+                const includeDonation = document.getElementById('include-donation').checked;
+                if (includeDonation) {
+                    const donationAmountInput = document.getElementById('donation-amount-input').value;
+                    if (donationAmountInput && parseFloat(donationAmountInput) > 0) {
+                        renewalDonation = Math.round(parseFloat(donationAmountInput) * 100); // Convert to cents
+                    }
+                }
             }
 
             const coverFees = document.getElementById('cover-fees').checked;
@@ -497,6 +555,7 @@
                         payment_type: selectedPaymentType,
                         membership_type: selectedMembershipType,
                         amount: amount,
+                        renewal_donation: renewalDonation,
                         payer_name: payerName,
                         payer_email: payerEmail,
                         cover_fees: coverFees
@@ -600,6 +659,10 @@
             document.getElementById('amount').value = '';
             document.getElementById('cover-fees').checked = false;
             document.getElementById('fee-breakdown').style.display = 'none';
+            document.getElementById('include-donation').checked = false;
+            document.getElementById('donation-amount-input').value = '';
+            document.getElementById('renewal-donation-amount').style.display = 'none';
+            document.getElementById('renewal-donation-section').style.display = 'none';
             
             hideStatus();
             showLoading(false);
