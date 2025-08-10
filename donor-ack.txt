@@ -1,17 +1,17 @@
-{payment_date
+{payment_date}
 
 Dear {Name (First):4.3},
 
-Thank you very much for your generous contribution of {Total:3} to the South Williamstown Community Association. Your donation is greatly appreciated and will support our mission to promote community and to engage in historic preservation and neighborhood building for Williamstown and surrounding locales.
+Thank you very much for your generous contribution of {Total:3} to [Your Organization Name]. Your donation is greatly appreciated and will support our mission to serve our community and advance our organizational goals.
 
-Your donation was received by the South Williamstown Community Association (SWCA). SWCA is recognized as a tax-exempt organization under section 501(c)(3) of the Internal Revenue Code and can accept tax-deductible donations in accordance with the Internal Revenue Service requirements.
+Your donation was received by [Your Organization Name]. [Your Organization Name] is recognized as a tax-exempt organization under section 501(c)(3) of the Internal Revenue Code and can accept tax-deductible donations in accordance with the Internal Revenue Service requirements.
 
-SWCA received your contribution on {payment_date} in the amount of {Total:3} was paid in person using our mobile card reader at one of our community events. This letter is your receipt for income tax purposes. No goods or services were provided to you by SWCA in return for your gift. For your records, SWCA’s Tax ID Number is 04-2751459. Please print this page and keep it with your tax records.
+[Your Organization Name] received your contribution on {payment_date} in the amount of {Total:3} which was paid in person using our mobile card reader at one of our community events. This letter is your receipt for income tax purposes. No goods or services were provided to you by [Your Organization Name] in return for your gift. For your records, [Your Organization Name]'s Tax ID Number is [Your Tax ID Number]. Please print this page and keep it with your tax records.
 
-If you have any questions, please email treasurer@southwilliamstown.org.
+If you have any questions, please email [your-contact-email].
 
 On behalf of the entire community, we wish to express our sincere gratitude for your contribution.
 
 Sincerely,
-Tamanika Steward, President
-South Williamstown Community Association
+[Organization President/Leader Name], [Title]
+[Your Organization Name]

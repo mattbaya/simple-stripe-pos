@@ -217,24 +217,36 @@ def send_receipt_email(payer_email, payer_name, amount, payment_type, transactio
     
     subject = f"Thank you for your {payment_type} - {ORGANIZATION_NAME}"
     
-    # Load the HTML template
+    # Load the HTML template - prefer local-config version if available
     try:
+        local_template_path = os.path.join(os.path.dirname(__file__), '..', 'local-config', 'templates', 'donor_acknowledgment_email.html')
         template_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'donor_acknowledgment_email.html')
+        
+        # Use local-config template if it exists, otherwise use the generic one
+        if os.path.exists(local_template_path):
+            template_path = local_template_path
+            logger.info("Using local-config email template")
+        else:
+            logger.info("Using generic email template")
+            
         with open(template_path, 'r', encoding='utf-8') as f:
             html_template = f.read()
         
         # Replace template variables
         html_body = html_template.format(
-            donor_name=payer_name,
-            donation_amount=f"${amount_dollars:.2f}",
-            payment_date=date_str
+            payer_name=payer_name,
+            amount_formatted=f"${amount_dollars:.2f}",
+            payment_date=date_str,
+            organization_name=ORGANIZATION_NAME,
+            payment_intent_id=transaction_id
         )
         
-        # Prepare letterhead image attachment
+        # Prepare letterhead image attachment - prefer local-config version
         attachments = []
-        letterhead_path = os.path.join(os.path.dirname(__file__), '..', 'templates', 'SWCA-letterhead-v3-1024x224.png')
+        local_letterhead_path = os.path.join(os.path.dirname(__file__), '..', 'local-config', 'templates', 'SWCA-letterhead-v3-1024x224.png')
+        letterhead_path = local_letterhead_path if os.path.exists(local_letterhead_path) else None
         
-        if os.path.exists(letterhead_path):
+        if letterhead_path and os.path.exists(letterhead_path):
             with open(letterhead_path, 'rb') as f:
                 img_data = f.read()
             
@@ -242,8 +254,9 @@ def send_receipt_email(payer_email, payer_name, amount, payment_type, transactio
             letterhead_img.add_header('Content-ID', '<letterhead>')
             letterhead_img.add_header('Content-Disposition', 'inline', filename='letterhead.png')
             attachments.append(letterhead_img)
+            logger.info("Using local-config letterhead image")
         else:
-            logger.warning(f"Letterhead image not found at {letterhead_path}")
+            logger.info("No letterhead image found, proceeding without embedded image")
         
         return send_email(payer_email, subject, html_body, is_html=True, attachments=attachments)
         

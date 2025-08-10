@@ -1,7 +1,7 @@
 # Community POS System - Project Context
 
 ## Overview
-This is a Flask-based point-of-sale system for the South Williamstown Community Association that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. Features optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30) with transparent cost breakdown. Includes professional success modal with organization branding and automatic email receipt system.
+This is a Flask-based point-of-sale system for community organizations that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. Features optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30) with transparent cost breakdown. Includes professional success modal with organization branding and automatic email receipt system.
 
 ## Technology Stack
 - **Backend**: Python Flask web application
@@ -31,7 +31,7 @@ The application requires these environment variables:
 - `INDIVIDUAL_MEMBERSHIP_AMOUNT` - Individual membership price (cents, default: 3500)
 - `HOUSEHOLD_MEMBERSHIP_AMOUNT` - Household membership price (cents, default: 5000)
 - `ORGANIZATION_NAME/LOGO/WEBSITE` - Branding configuration
-- `DOMAIN_NAME` - Primary domain (reader.southwilliamstown.org)
+- `DOMAIN_NAME` - Primary domain (pos.yourdomain.org)
 - `NOTIFICATION_EMAIL` - Organization notification recipient
 - `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN` - OAuth2 credentials
 - `FROM_EMAIL` - Sender email address
@@ -44,7 +44,7 @@ The application requires these environment variables:
 - Health check: `curl http://localhost:8080/health`
 
 ## Production Deployment
-- Domain: `reader.southwilliamstown.org` (standard ports 80/443)
+- Domain: Configure with your organization's domain (standard ports 80/443)
 - Production runs with Caddy reverse proxy handling SSL
 - Caddy handles SSL certificates automatically via Let's Encrypt
 - Application enforces HTTPS redirects and domain consistency
@@ -88,10 +88,16 @@ The application requires these environment variables:
 - **Clear Visual Feedback**: Loading spinners, status messages, and error handling
 
 ## Hardware Setup
-- **Card Reader**: Stripe S700 Terminal (SWCA S700 Reader)
-- **Reader ID**: tmr_GJIc8gfqlW1SF1
-- **Status**: Online and registered to location tml_GJFbNglXXR3JXh
-- **Serial**: ...4847
+- **Card Reader**: Stripe S700 Terminal (configure with your reader)
+- **Reader ID**: Configure with your terminal reader ID
+- **Status**: Check terminal status in Stripe dashboard
+- **Serial**: Your terminal's serial number
+
+## Local Configuration
+- Organization-specific files are stored in `local-config/` directory
+- This directory is gitignored to prevent committing sensitive organization data
+- Application automatically prefers local-config files when available
+- See `local-config/README.md` for setup instructions
 
 ## Security Notes
 - Environment files (.env*) are gitignored
@@ -99,12 +105,13 @@ The application requires these environment variables:
 - Stripe handles all sensitive payment data
 - Automatic HTTPS with security headers via Caddy
 - Domain enforcement and HTTPS redirect
-- Application designed for South Williamstown Community Association
+- Organization-specific data kept in local-config directory
 
 ## Email Receipt System
-- **Professional HTML Templates**: Uses custom HTML email template with organization letterhead
-- **Embedded Images**: SWCA letterhead image embedded as inline attachment for consistent display
+- **Professional HTML Templates**: Uses HTML email template with organization letterhead (configurable)
+- **Embedded Images**: Organization letterhead image embedded as inline attachment for consistent display
 - **Template Variables**: Dynamic content including donor name, amount, date, and transaction details
 - **Tax Receipt Information**: Includes 501(c)(3) status, Tax ID, and IRS-compliant receipt language
 - **Fallback Support**: Graceful fallback to simple HTML email if template loading fails
 - **Gmail API Integration**: Secure OAuth2-authenticated sending via Gmail API
+- **Local-Config Support**: Automatically uses organization-specific templates from local-config when available

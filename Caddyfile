@@ -1,9 +1,9 @@
 # Caddyfile for automatic HTTPS with Let's Encrypt
 {
-    email info@southwilliamstown.org
+    email admin@yourdomain.com
 }
 
-reader.southwilliamstown.org {
+pos.yourdomain.com {
     # Automatic Let's Encrypt certificate
     
     # Reverse proxy to Flask app (host networking)

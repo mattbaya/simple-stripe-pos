@@ -13,8 +13,8 @@ services:
       - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
       - FROM_EMAIL=${FROM_EMAIL}
-      - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL:-info@southwilliamstown.org}
-      - ORGANIZATION_NAME=${ORGANIZATION_NAME:-South Williamstown Community Association}
+      - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL:-admin@yourdomain.com}
+      - ORGANIZATION_NAME=${ORGANIZATION_NAME:-Your Community Organization}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - GOOGLE_REFRESH_TOKEN=${GOOGLE_REFRESH_TOKEN}

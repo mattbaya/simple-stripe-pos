@@ -28,10 +28,5 @@ Thumbs.db
 # Logs
 *.log
 
-# Organization-specific assets - should not be committed
-templates/SWCA-letterhead-v3-1024x224.png
-templates/letterhead.png
-static/logo.png
-
-# Organization-specific email templates  
-templates/donor_acknowledgment_email.html
+# Local configuration - organization-specific files
+local-config/
