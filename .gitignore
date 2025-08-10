@@ -30,3 +30,6 @@ Thumbs.db
 
 # Local configuration - organization-specific files
 local-config/
+
+# Railway deployment version
+railway/
