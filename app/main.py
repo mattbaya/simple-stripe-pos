@@ -232,13 +232,37 @@ def send_receipt_email(payer_email, payer_name, amount, payment_type, transactio
         with open(template_path, 'r', encoding='utf-8') as f:
             html_template = f.read()
         
+        # Prepare template variables based on payment type
+        is_membership = payment_type.lower() in ['individual membership', 'household membership']
+        
+        # Create membership-specific message
+        membership_message = ""
+        if is_membership:
+            membership_message = '''
+            <div class="membership-message">
+                <strong>New Member Information Request:</strong><br>
+                Since you paid for your membership using our mobile card reader, we only collected your name and email address. If you are a new member, first off - <strong>Thank you!</strong> We're honored to have you join us. 
+                <br><br>
+                We'd appreciate it if you could please <strong>reply to this email with your address and phone number</strong> so we can complete your membership record and keep you updated on community events and activities.
+            </div>
+            '''
+        
+        # Set appropriate text based on payment type
+        payment_type_title = payment_type.title()
+        goods_services_statement = ("No goods or services were provided to you in return for your gift." if not is_membership 
+                                  else "Membership benefits are not considered goods or services for tax deduction purposes.")
+        
         # Replace template variables
         html_body = html_template.format(
             payer_name=payer_name,
             amount_formatted=f"${amount_dollars:.2f}",
             payment_date=date_str,
             organization_name=ORGANIZATION_NAME,
-            payment_intent_id=transaction_id
+            payment_intent_id=transaction_id,
+            payment_type=payment_type.lower(),
+            payment_type_title=payment_type_title,
+            membership_message=membership_message,
+            goods_services_statement=goods_services_statement
         )
         
         # Prepare letterhead image attachment - prefer local-config version
@@ -263,6 +287,18 @@ def send_receipt_email(payer_email, payer_name, amount, payment_type, transactio
     except Exception as e:
         logger.error(f"Error loading email template: {str(e)}")
         # Fallback to simple email if template loading fails
+        is_membership_fallback = payment_type.lower() in ['individual membership', 'household membership']
+        membership_request = ""
+        if is_membership_fallback:
+            membership_request = f"""
+            <div style="background-color: #e8f5e8; padding: 15px; margin: 15px 0; border-left: 4px solid #28a745; border-radius: 5px;">
+                <strong>New Member Information Request:</strong><br>
+                Since you paid for your membership using our mobile card reader, we only collected your name and email address. If you are a new member, first off - <strong>Thank you!</strong> We're honored to have you join us.
+                <br><br>
+                We'd appreciate it if you could please <strong>reply to this email with your address and phone number</strong> so we can complete your membership record and keep you updated on community events and activities.
+            </div>
+            """
+        
         fallback_body = f"""
         <html>
         <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -273,6 +309,7 @@ def send_receipt_email(payer_email, payer_name, amount, payment_type, transactio
             Date: {date_str}<br>
             Amount: ${amount_dollars:.2f}<br>
             Transaction ID: {transaction_id}</p>
+            {membership_request}
             <p>This serves as your receipt for tax purposes.</p>
             <p>Sincerely,<br>{ORGANIZATION_NAME}</p>
         </body>

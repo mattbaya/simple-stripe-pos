@@ -1,16 +1,26 @@
-# Community POS System - Project Context
+# 🏪 Community POS System - Project Context
 
-## Overview
-This is a Flask-based point-of-sale system for community organizations that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. Features optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30) with transparent cost breakdown. Includes professional success modal with organization branding and automatic email receipt system.
+## 📋 Overview
 
-## Technology Stack
-- **Backend**: Python Flask web application
-- **Payment Processing**: Stripe Terminal API (v8.11.0) with S700 card reader
-- **Email**: OAuth2-authenticated Gmail API for receipts and notifications
-- **Deployment**: Docker containers with Caddy reverse proxy for SSL
-- **Frontend**: Bootstrap-based web interface with JavaScript
-- **Fee Calculation**: Real-time Stripe fee calculations with optional coverage
-- **SSL**: Automatic HTTPS with Let's Encrypt via Caddy
+This is a **Flask-based point-of-sale system** for community organizations that enables in-person payment processing for donations and memberships using Stripe Terminal hardware. 
+
+### Key Features:
+- ✅ Optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30)
+- ✅ Transparent cost breakdown
+- ✅ Professional success modal with organization branding
+- ✅ Automatic email receipt system
+
+## 🛠️ Technology Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Backend** | Python Flask web application |
+| **Payment Processing** | Stripe Terminal API (v8.11.0) with S700 card reader |
+| **Email** | OAuth2-authenticated Gmail API for receipts and notifications |
+| **Deployment** | Docker containers with Caddy reverse proxy for SSL |
+| **Frontend** | Bootstrap-based web interface with JavaScript |
+| **Fee Calculation** | Real-time Stripe fee calculations with optional coverage |
+| **SSL** | Automatic HTTPS with Let's Encrypt via Caddy |
 
 ## Key Files
 - `app/main.py` - Main Flask application with payment processing logic
@@ -36,12 +46,24 @@ The application requires these environment variables:
 - `GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN` - OAuth2 credentials
 - `FROM_EMAIL` - Sender email address
 
-## Development Commands
-- Start development: `docker compose up -d`
-- Start production: `docker compose -f docker-compose.prod.yml up -d`
-- Logs: `docker compose logs -f` 
-- Stop: `docker compose down`
-- Health check: `curl http://localhost:8080/health`
+## 🚀 Development Commands
+
+```bash
+# Start development
+docker compose up -d
+
+# Start production
+docker compose -f docker-compose.prod.yml up -d
+
+# View logs
+docker compose logs -f
+
+# Stop containers
+docker compose down
+
+# Health check
+curl http://localhost:8080/health
+```
 
 ## Production Deployment
 - Domain: Configure with your organization's domain (standard ports 80/443)
@@ -50,16 +72,31 @@ The application requires these environment variables:
 - Application enforces HTTPS redirects and domain consistency
 - Reader status display automatically loads and shows connected devices
 
-## Payment Flow
-1. User selects donation or membership (individual/household) on web interface
-2. User enters amount (for donations), name, and **required** email address
-3. User optionally selects fee coverage (shows transparent breakdown)
-4. System creates Stripe PaymentIntent with calculated amount
-5. Payment processed on S700 terminal hardware
-6. Success shows professional modal with organization logo and payment details
-7. Automatic HTML email receipt sent to user with embedded letterhead and professional formatting
-8. Organization notification email sent for tracking purposes
-9. All transaction data stored in Stripe, no local database
+## 💳 Payment Flow
+
+```mermaid
+graph TD
+    A[User visits web interface] --> B[Select donation or membership type]
+    B --> C[Enter amount, name, and email]
+    C --> D[Optional: Select fee coverage]
+    D --> E[System creates Stripe PaymentIntent]
+    E --> F[Payment processed on S700 terminal]
+    F --> G[Success modal with organization branding]
+    G --> H[Email receipt sent to user]
+    H --> I[Notification email sent to organization]
+    I --> J[Transaction stored in Stripe]
+```
+
+### Step-by-Step Process:
+1. 🖥️ User selects donation or membership (individual/household) on web interface
+2. ✍️ User enters amount (for donations), name, and **required** email address
+3. 💰 User optionally selects fee coverage (shows transparent breakdown)
+4. 🔄 System creates Stripe PaymentIntent with calculated amount
+5. 💳 Payment processed on S700 terminal hardware
+6. ✅ Success shows professional modal with organization logo and payment details
+7. 📧 Automatic HTML email receipt sent to user with embedded letterhead
+8. 📬 Organization notification email sent for tracking purposes
+9. 💾 All transaction data stored in Stripe, no local database
 
 ## API Endpoints
 - `GET /` - Main payment interface with automatic reader discovery

@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 COPY templates/ ./templates/
 COPY static/ ./static/
+COPY local-config/ ./local-config/
 
 # Create non-root user and logs directory
 RUN adduser --disabled-password --gecos '' appuser

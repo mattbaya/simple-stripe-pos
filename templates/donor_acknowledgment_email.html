@@ -78,6 +78,16 @@
             padding-top: 20px;
             border-top: 1px solid #eee;
         }}
+        .membership-message {{
+            background-color: #e8f5e8;
+            padding: 20px;
+            border-left: 4px solid #28a745;
+            margin: 20px 0;
+            border-radius: 5px;
+        }}
+        .membership-message strong {{
+            color: #155724;
+        }}
     </style>
 </head>
 <body>
@@ -93,28 +103,28 @@
         </div>
         
         <div class="content">
-            <p>Thank you very much for your generous contribution of <strong>{amount_formatted}</strong> to {organization_name}. Your donation is greatly appreciated and will support our mission to serve our community.</p>
+            <p>Thank you very much for your generous {payment_type} of <strong>{amount_formatted}</strong> to {organization_name}. Your {payment_type} is greatly appreciated and will support our mission to serve our community and advance our organizational goals.</p>
             
             <div class="donation-details">
-                <strong>Donation Details:</strong><br>
+                <strong>{payment_type_title} Details:</strong><br>
                 Amount: {amount_formatted}<br>
                 Date: {payment_date}<br>
                 Payment Method: In-person card payment<br>
                 Transaction ID: {payment_intent_id}
             </div>
             
-            <p>Your donation was received by {organization_name}. This organization is recognized as a tax-exempt organization under section 501(c)(3) of the Internal Revenue Code and can accept tax-deductible donations in accordance with the Internal Revenue Service requirements.</p>
+            {membership_message}
+            
+            <p>Your {payment_type} was received by {organization_name}. {organization_name} is recognized as a tax-exempt organization under section 501(c)(3) of the Internal Revenue Code and can accept tax-deductible donations in accordance with the Internal Revenue Service requirements.</p>
             
             <div class="tax-info">
                 <strong>Tax Receipt Information:</strong><br>
-                This letter serves as your receipt for income tax purposes. No goods or services were provided to you in return for your gift. Please retain this receipt with your tax records.
-                <br><br>
-                <em>Note: Tax ID and other specific tax information should be added by your organization.</em>
+                {organization_name} received your contribution on {payment_date} in the amount of {amount_formatted} which was paid in person using our mobile card reader at one of our community events. This letter is your receipt for income tax purposes. {goods_services_statement} For your records, {organization_name}'s Tax ID Number is [Your Tax ID Number]. Please print this page and keep it with your tax records.
             </div>
             
-            <p>If you have any questions about your donation, please contact us at your convenience.</p>
+            <p>If you have any questions, please email [your-contact-email].</p>
             
-            <p>On behalf of our entire organization, we wish to express our sincere gratitude for your contribution and continued support.</p>
+            <p>On behalf of the entire community, we wish to express our sincere gratitude for your contribution.</p>
         </div>
         
         <div class="signature">
