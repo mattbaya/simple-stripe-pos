@@ -1,24 +1,26 @@
-# Community POS System (Railway Version)
+# Community POS System (Docker Version)
 
-A lightweight point-of-sale application for community organizations to process in-person donations and membership payments using Stripe Terminal hardware. **Optimized for Railway deployment with ~$3/year operating costs for sporadic use.**
+A lightweight point-of-sale application for community organizations to process in-person donations and membership payments using Stripe Terminal hardware. **Docker deployment with SSL/domain management and enhanced UI features.**
 
-**🐳 Docker Version:** For full-featured Docker deployment with SSL/domain management, see the parent directory.
+**🚂 Railway Version:** For cost-optimized Railway deployment (~$3/year), see the [Railway version](https://github.com/mattbaya/simple-stripe-pos-railway).
 
-## Cost-Effective Deployment
+## Docker Deployment Benefits
 
-Perfect for organizations that use their POS system **several times per year**:
-- **Railway.app**: Pay only when running (~$0.10/hour)
-- **Annual cost**: ~$3/year for 28 hours of usage (7 events × 4 hours each)
-- **Auto-sleep**: Automatically stops when inactive to minimize costs
-- **Instant activation**: Scale up 30 minutes before your event
+Perfect for organizations that need reliable, always-available payment processing:
+- **Self-hosted control**: Run on your own infrastructure
+- **SSL/Domain management**: Automatic HTTPS with Caddy reverse proxy
+- **Production ready**: Docker Compose orchestration for stability
+- **Local development**: Easy setup for testing and customization
 
 ## Features
 
 - **Professional web interface** with donation and membership buttons  
 - **Two membership tiers**: Individual ($35) and Household ($50)
+- **Renewal donation option**: Members can add additional donations to membership payments
 - Integration with Stripe S700 terminal for card-present transactions
-- **Optional fee coverage**: Users can choose to cover 2.9% + $0.30 Stripe processing fees
-- Real-time fee calculation with transparent breakdown display
+- **Conditional fee coverage**: Fee breakdown only shows when users opt to cover 2.9% + $0.30 Stripe processing fees
+- **Consistent typography**: All fee text uses 28px font size for better readability
+- **Form field reset**: Clean form state when switching between payment types
 - **Required email validation**: Ensures receipt delivery with HTML5 and JavaScript validation
 - Custom donation amounts with dynamic fee calculations
 - **Professional HTML email receipts** sent to donors with embedded letterhead using Gmail API with OAuth2
@@ -27,23 +29,20 @@ Perfect for organizations that use their POS system **several times per year**:
 - **Professional success modal** with organization logo and animated confirmation
 - **Automatic reader discovery**: Displays connected terminal status on page load
 - Customizable organization branding
-- **Automatic HTTPS**: SSL certificates handled by Railway
+- **Automatic HTTPS**: SSL certificates handled by Caddy reverse proxy
+- **Docker orchestration**: Production-ready containerized deployment
 - No local database required - all data handled by Stripe
 
-## Quick Railway Deployment
+## Quick Docker Deployment
 
-### 1. Fork this Repository
-1. Click "Fork" on this GitHub repo
-2. This gives you your own copy to deploy
+### 1. Clone the Repository
+```bash
+git clone https://github.com/yourusername/simple-stripe-pos.git
+cd simple-stripe-pos
+```
 
-### 2. Connect to Railway
-1. Go to [railway.app](https://railway.app) and sign up
-2. Click "New Project" → "Deploy from GitHub repo"
-3. Select your forked repository
-4. Railway automatically detects Flask and deploys
-
-### 3. Configure Environment Variables
-In Railway dashboard, add these variables:
+### 2. Configure Environment Variables
+Create a `.env` file with these variables:
 
 ```
 # Stripe Configuration
@@ -66,28 +65,36 @@ GOOGLE_CLIENT_SECRET=your_client_secret
 GOOGLE_REFRESH_TOKEN=your_refresh_token
 ```
 
-### 4. Set Custom Domain (Optional)
-- In Railway settings, add your custom domain (e.g., pos.yourdomain.org)
-- Or use the provided Railway URL
+### 3. Set Custom Domain (Optional)
+If you want to use your own domain (e.g., pos.yourdomain.org):
+1. Update the `DOMAIN_NAME` variable in your `.env` file
+2. Point your domain's DNS to your server
+3. Caddy will automatically handle SSL certificates
 
-### 5. Configure Auto-Sleep
-- **Default**: Railway automatically sleeps after inactivity
-- **Manual Control**: Use Railway dashboard to start/stop as needed
-- **Cost**: $0/month when sleeping, ~$0.10/hour when active
+### 4. Deploy with Docker
+For **development**:
+```bash
+docker compose up -d
+```
 
-## Pre-Event Checklist
+For **production**:
+```bash
+docker compose -f docker-compose.prod.yml up -d
+```
 
-**30 minutes before your event:**
-1. Open Railway dashboard
-2. Ensure app is running (wake from sleep if needed)
-3. Test payment flow with a small amount
-4. Confirm Stripe terminal is online
-5. Share payment URL with volunteers
+## Quick Start Guide
 
-**After your event:**
-1. App automatically sleeps after ~30 minutes of inactivity
-2. Check Railway dashboard to confirm it's sleeping
-3. Review payments in Stripe dashboard
+### Development Setup (localhost:8080)
+1. Configure environment variables in `.env`
+2. Run: `docker compose up -d`
+3. Visit: http://localhost:8080
+4. Test with Stripe test terminal
+
+### Production Setup (your-domain.org)
+1. Configure environment variables including `DOMAIN_NAME`
+2. Run: `docker compose -f docker-compose.prod.yml up -d`
+3. Caddy handles SSL automatically
+4. Use real Stripe keys and terminal
 
 ## Stripe Terminal Setup
 
