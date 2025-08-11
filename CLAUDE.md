@@ -6,9 +6,12 @@ This is a **Flask-based point-of-sale system** for community organizations that 
 
 ### Key Features:
 - ✅ Optional fee coverage allowing users to cover Stripe processing fees (2.9% + $0.30)
-- ✅ Transparent cost breakdown
+- ✅ Transparent cost breakdown (only shows when fee coverage is selected)
 - ✅ Professional success modal with organization branding
 - ✅ Automatic email receipt system
+- ✅ Renewal donation option for membership payments
+- ✅ Form field reset when switching payment types
+- ✅ Consistent 28px font sizing for fee breakdown display
 
 ## 🛠️ Technology Stack
 
@@ -152,3 +155,23 @@ graph TD
 - **Fallback Support**: Graceful fallback to simple HTML email if template loading fails
 - **Gmail API Integration**: Secure OAuth2-authenticated sending via Gmail API
 - **Local-Config Support**: Automatically uses organization-specific templates from local-config when available
+
+## 🎨 UI/UX Features & Recent Improvements
+
+### Fee Breakdown System
+- **Conditional Display**: Fee breakdown only appears when "Help us cover processing fees" is checked
+- **Consistent Typography**: All fee breakdown text uses 28px font size for better readability
+- **Real-time Calculation**: Updates dynamically as users toggle options or change amounts
+- **Transparent Pricing**: Shows base amount, processing fee, and total separately
+
+### Renewal Donation Feature
+- **Membership Enhancement**: Members can add additional donations to their membership payments
+- **Toggle Interface**: Checkbox to enable/disable additional donation option
+- **Flexible Amount**: Users can specify any additional donation amount
+- **Integrated Calculations**: Renewal donations included in fee calculations and payment processing
+
+### Form Management
+- **Clean State Reset**: All form fields clear when switching between payment types
+- **Prevents Data Persistence**: Eliminates confusion from retained values across payment types
+- **Better User Experience**: Each payment selection starts with a fresh, clean form
+- **Comprehensive Reset**: Clears name, email, amounts, checkboxes, and fee displays
