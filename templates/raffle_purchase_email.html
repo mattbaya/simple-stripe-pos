@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raffle Ticket Purchase Confirmation</title>
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }}
+        .email-container {{
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        .letterhead {{
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .letterhead img {{
+            max-width: 100%;
+            height: auto;
+        }}
+        .organization-name {{
+            font-size: 24px;
+            font-weight: bold;
+            color: #2c5aa0;
+            text-align: center;
+            margin-bottom: 30px;
+        }}
+        .date {{
+            text-align: right;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }}
+        .greeting {{
+            font-size: 16px;
+            margin-bottom: 20px;
+        }}
+        .content p {{
+            margin-bottom: 15px;
+            text-align: justify;
+        }}
+        .raffle-details {{
+            background-color: #fff8dc;
+            padding: 15px;
+            border-left: 4px solid #ff9a56;
+            margin: 20px 0;
+        }}
+        .raffle-details strong {{
+            color: #ff9a56;
+        }}
+        .raffle-emoji {{
+            font-size: 24px;
+            margin-right: 10px;
+        }}
+        .tax-info {{
+            background-color: #ffe4e1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 14px;
+            border-left: 4px solid #dc3545;
+        }}
+        .tax-info strong {{
+            color: #dc3545;
+        }}
+        .signature {{
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }}
+        .footer {{
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }}
+        .good-luck {{
+            background-color: #f0f8ff;
+            padding: 20px;
+            border-left: 4px solid #007bff;
+            margin: 20px 0;
+            border-radius: 5px;
+            text-align: center;
+        }}
+        .good-luck strong {{
+            color: #007bff;
+        }}
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="letterhead">
+            <img src="cid:letterhead" alt="{organization_name}" style="max-width: 100%; height: auto;">
+            <div class="organization-name">{organization_name}</div>
+        </div>
+        
+        <div class="date">{payment_date}</div>
+        
+        <div class="greeting">
+            Dear {payer_name},
+        </div>
+        
+        <div class="content">
+            <p>Thank you for purchasing raffle tickets at our community event! Your support helps us raise funds for important community programs and activities.</p>
+            
+            <div class="raffle-details">
+                <span class="raffle-emoji">🎟️</span><strong>Raffle Ticket Purchase Details:</strong><br>
+                Number of Tickets: {raffle_quantity}<br>
+                Total Amount Paid: {amount_formatted}<br>
+                Price Per Ticket: ${raffle_price_formatted}<br>
+                Date: {payment_date}<br>
+                Payment Method: In-person card payment<br>
+                Transaction ID: {payment_intent_id}
+            </div>
+            
+            <div class="good-luck">
+                <strong>🍀 Good Luck in the Raffle Drawing! 🍀</strong><br>
+                <p style="margin-top: 10px;">We hope you win! Drawing details and winners will be announced soon.</p>
+            </div>
+            
+            <div class="tax-info">
+                <strong>Important Tax Information:</strong><br>
+                This purchase is <strong>NOT tax-deductible</strong>. Raffle ticket purchases are considered payments for goods and services (the chance to win prizes) rather than charitable donations. This receipt is for your records only and cannot be used as a tax deduction.
+            </div>
+            
+            <p>If you have any questions about the raffle or your purchase, please contact us at info@southwilliamstown.org.</p>
+            
+            <p>Thank you for supporting our community fundraising efforts!</p>
+        </div>
+        
+        <div class="signature">
+            <p>Sincerely,</p>
+            <p><strong>Tamanika Steward, President</strong><br>
+            South Williamstown Community Association</p>
+        </div>
+        
+        <div class="footer">
+            <p>This email was automatically generated by our payment processing system.</p>
+        </div>
+    </div>
+</body>
+</html>

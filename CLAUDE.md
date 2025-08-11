@@ -12,6 +12,7 @@ This is a **Flask-based point-of-sale system** for community organizations that 
 - ✅ Renewal donation option for membership payments
 - ✅ Form field reset when switching payment types
 - ✅ Consistent 28px font sizing for fee breakdown display
+- ✅ Raffle ticket system with tiered pricing and professional email receipts
 
 ## 🛠️ Technology Stack
 
@@ -30,7 +31,9 @@ This is a **Flask-based point-of-sale system** for community organizations that 
 - `templates/index.html` - Web interface for payment collection
 - `templates/donor_acknowledgment_email.html` - Professional HTML email template for donation receipts
 - `templates/donor_acknowledgment_email_template.html` - Generic template for other organizations
+- `templates/raffle_purchase_email.html` - Professional HTML email template for raffle ticket receipts
 - `donor-ack.txt` - Source text for donation acknowledgment emails
+- `test_raffle_email.py` - Test script for raffle email functionality
 - `docker-compose.yml` - Development container orchestration
 - `docker-compose.prod.yml` - Production setup with Caddy SSL proxy
 - `Caddyfile` - Caddy configuration for SSL and reverse proxy
@@ -175,3 +178,24 @@ graph TD
 - **Prevents Data Persistence**: Eliminates confusion from retained values across payment types
 - **Better User Experience**: Each payment selection starts with a fresh, clean form
 - **Comprehensive Reset**: Clears name, email, amounts, checkboxes, and fee displays
+
+### Raffle Ticket System
+- **Tiered Pricing Structure**: 5 tickets/$5.00, 12 tickets/$10.00, 25 tickets/$20.00, 25+ tickets/$0.80 each
+- **Dynamic Price Display**: Email receipts show correct per-ticket pricing based on quantity purchased
+- **Professional Email Template**: Dedicated raffle purchase confirmation with tax information
+- **Contact Integration**: Fixed contact email display (info@southwilliamstown.org)
+- **Test Script Support**: `test_raffle_email.py` for validating email functionality
+
+## 🧪 Testing & Development Tools
+
+### Raffle Email Testing
+```bash
+# Test raffle email functionality
+docker compose cp test_raffle_email.py pos-app:/app/
+docker compose exec pos-app python3 /app/test_raffle_email.py
+```
+
+### Recent Bug Fixes (August 2025)
+- **Fixed raffle email contact placeholder**: Replaced `[your-contact-email]` with `info@southwilliamstown.org`
+- **Dynamic pricing in emails**: Template now uses `{raffle_price_formatted}` variable instead of fixed `$0.80`
+- **Template validation**: Added test script to verify email template changes work correctly

@@ -29,6 +29,7 @@ Perfect for organizations that need reliable, always-available payment processin
 - **Professional success modal** with organization logo and animated confirmation
 - **Automatic reader discovery**: Displays connected terminal status on page load
 - Customizable organization branding
+- **Raffle ticket system**: Tiered pricing (5/$5, 12/$10, 25/$20, 25+/80¢ each) with dynamic email receipts
 - **Automatic HTTPS**: SSL certificates handled by Caddy reverse proxy
 - **Docker orchestration**: Production-ready containerized deployment
 - No local database required - all data handled by Stripe
@@ -220,6 +221,26 @@ python app/main.py
 - Enable 2FA on Stripe and Google Cloud accounts  
 - Regularly rotate API keys and refresh tokens
 - Railway provides HTTPS automatically
+
+## Testing & Development
+
+### Raffle Email Testing
+Use the included test script to verify raffle email functionality:
+```bash
+# Copy script to container and run
+docker compose cp test_raffle_email.py pos-app:/app/
+docker compose exec pos-app python3 /app/test_raffle_email.py
+```
+
+The test script demonstrates:
+- Dynamic pricing display (5 tickets = $1.00 each, 12 tickets = $0.83 each, etc.)
+- Proper contact email integration
+- Professional HTML email template with organization branding
+
+### Recent Improvements
+- **Fixed raffle email template**: Contact email now shows `info@southwilliamstown.org` instead of placeholder
+- **Dynamic pricing display**: Email receipts show correct per-ticket pricing based on quantity tiers
+- **Template validation**: Test script included for verifying email functionality
 
 ## Support Resources
 - **Stripe**: [Terminal Documentation](https://stripe.com/docs/terminal)
