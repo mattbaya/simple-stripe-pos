@@ -378,6 +378,16 @@
         let currentFeeData = null;
 
         function selectPaymentType(type, membershipType = null) {
+            // Reset all form fields when switching payment types
+            document.getElementById('payer-name').value = '';
+            document.getElementById('payer-email').value = '';
+            document.getElementById('amount').value = '';
+            document.getElementById('cover-fees').checked = false;
+            document.getElementById('fee-breakdown').style.display = 'none';
+            document.getElementById('include-donation').checked = false;
+            document.getElementById('donation-amount-input').value = '';
+            document.getElementById('renewal-donation-amount').style.display = 'none';
+            
             selectedPaymentType = type;
             selectedMembershipType = membershipType;
             document.getElementById('payment-form').style.display = 'block';
